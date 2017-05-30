@@ -5,7 +5,7 @@ may be rearranged into any order desired.
 
 A mind-bendingly simple implementation.
 
-(qb1-obj purposefully gives direct access to keys - see [comment](#is_this_safe?) below)
+(qb1-obj purposefully gives direct access to keys - see [comment](#is_this_safe) below)
 
 ## Install
 
