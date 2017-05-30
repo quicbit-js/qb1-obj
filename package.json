@@ -1,7 +1,7 @@
 {
   "name": "qb1-obj",
   "version": "1.0.0",
-  "description": "An efficient representation of a numerical interval with support for union, intersection, and bounds checking",
+  "description": "An object that keeps string keys in insertion order which can be re-ordered as needed. Minimal code.",
   "homepage": "https://github.com/quicbit-js/qb1-obj",
   "url": "https://github.com/quicbit-js/qb1-obj/issues",
   "email": "support@quicbit.com",
@@ -18,10 +18,15 @@
     "cov": "tap --coverage-report=html test.js"
   },
   "keywords": [
+    "object",
+    "order",
+    "map",
+    "dictionary",
+    "simple",
+    "minimal",
+    "keys",
+    "serial",
     "fast",
-    "interval",
-    "range",
-    "set",
     "qb",
     "qb1",
     "quicbit",
