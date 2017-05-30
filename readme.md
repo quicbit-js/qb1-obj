@@ -5,6 +5,8 @@ may be rearranged into any order desired.
 
 A mind-bendingly simple implementation.
 
+(qb1-obj purposefully gives direct access to keys - see [comment](#is_this_safe?) below)
+
 ## Install
 
     npm install qb1-obj
@@ -75,13 +77,17 @@ of the object values.
     o.str()
     
     > {a:nul,b:'hi'}
-    
+
+
+## Is this safe?
+
 **Wait!** Isn't that extremely dangerous?  What about encapsulation?  Shouldn't we make defensive copies of the
 keys instead of just handing them back? 
 
-Well, yes.  If we were building that sort of rich and safe (and complex) library, but we take another
+Well, yes.  If we were building that sort of rich and safe (and complex, and slow-for-big-objects) 
+library, but we take another
 approach to reducing unwanted surprises in code... by making things simple and 
 transparent enough that they are understood.  qb1-obj
 is so simple that you can go ahead and sort the keys to your purposes, or 
-insert values in the keys if you understand the contract to keep m.keys sync with the keys of m.obj.   
+insert values in the keys if you understand the contract to keep m.keys in sync with the keys of m.obj.   
 That's it.  That's the whole contract.
