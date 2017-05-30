@@ -1,0 +1,35 @@
+{
+  "name": "qb1-obj",
+  "version": "1.0.0",
+  "description": "An efficient representation of a numerical interval with support for union, intersection, and bounds checking",
+  "homepage": "https://github.com/quicbit-js/qb1-obj",
+  "url": "https://github.com/quicbit-js/qb1-obj/issues",
+  "email": "support@quicbit.com",
+  "repository": "quicbit-js/qb1-obj",
+  "dependencies": {
+    "qb1-serial-plain": "^1.0.1"
+  },
+  "devDependencies": {
+    "tape": "^4.6.3",
+    "test-kit": "^2.5.1"
+  },
+  "scripts": {
+    "test": "tape test.js",
+    "cov": "tap --coverage-report=html test.js"
+  },
+  "keywords": [
+    "fast",
+    "interval",
+    "range",
+    "set",
+    "qb",
+    "qb1",
+    "quicbit",
+    "data",
+    "data type",
+    "performance",
+    "compact"
+  ],
+  "author": "Matthew Voss",
+  "license": "ISC"
+}
