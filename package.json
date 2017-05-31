@@ -1,6 +1,6 @@
 {
   "name": "qb1-obj",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An object that keeps string keys in insertion order which can be re-ordered as needed. Minimal code.",
   "homepage": "https://github.com/quicbit-js/qb1-obj",
   "url": "https://github.com/quicbit-js/qb1-obj/issues",
