@@ -4,7 +4,7 @@ var obj = require('.')
 test('create', function (t) {
     t.table_assert([
         [ 'args',                               'exp' ],
-        [ [[['a',1],['b',2]]],                  '{a:1,b:2}' ],
+        [ [['a',1,'b',2]],                  '{a:1,b:2}' ],
         [ [['b','a'],{a:1,b:2}],                '{b:2,a:1}' ],
         [ [['a','b'],[null,'N']],               "{a:N,b:'N'}" ],
     ], function (args) {
@@ -38,8 +38,7 @@ test('put, remove, length', function (t) {
 test('errors', function (t) {
     t.table_assert([
         [ 'args',                                   'exp' ],
-        [ [['a','b'],[1]],                          /different length/ ],
-        [ [['a','b'],[1,undefined]],                /undefined values/ ],
+        [ [[],5],                                   /illegal argument/ ],
         [ [5],                                      /illegal argument/ ],
         [ [[],[],[]],                               /too many arguments/ ],
     ], function (args) {

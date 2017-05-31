@@ -48,45 +48,29 @@ Obj.prototype = {
 
 function err(msg) { throw Error(msg) }
 
-function from_pairs(pairs) {
-    var keys = []
-    var vals = []
-    for(var i=0; i<pairs.length; i++) {
-        keys[i] = pairs[i][0]
-        vals[i] = pairs[i][1]
-    }
-    return from_arrays(keys, vals)
-}
-function from_arrays(keys, vals) {
-    keys.length === vals.length || err('keys and vals have different length: ' + keys.length + '/' + vals.length)
+function obj() {
     var ret = new Obj([],[])
-    for (var i=0; i<keys.length; i++) {
-        vals[i] !== undefined || err('cannot initialize map with undefined values')
-        ret.put(keys[i], vals[i])
+    if (arguments.length > 0) {
+        var a0 = arguments[0]
+        Array.isArray(a0) || err('illegal argument: ' + a0)
+        var i = 0
+        if (arguments.length === 1) {
+            // from tuples
+            while (i < a0.length) { ret.put(a0[i], a0[i+1]); i += 2 }
+        } else if (arguments.length === 2) {
+            // from keys & vals array or object
+            var vals = arguments[1]
+            typeof vals === 'object' || err('illegal argument: ' + vals)
+            if (Array.isArray(vals)) {
+                while(i < a0.length) { ret.put(a0[i], vals[i]); i++ }
+            } else {
+                while(i < a0.length) { ret.put(a0[i], vals[a0[i]]); i++ }
+            }
+        } else {
+            err('too many arguments')
+        }
     }
     return ret
-}
-
-function obj() {
-    var args = arguments
-    if (args.length === 0) {
-        return new Obj([], [])
-    } else {
-        Array.isArray(args[0]) || err('illegal argument: ' + args[0])
-        if (args.length === 1) {
-            return from_pairs(args[0])
-        }
-        if (args.length === 2) {
-            var keys = args[0]
-            var vals = args[1]
-            if (Array.isArray(vals)) {
-                return from_arrays(keys, vals)
-            } else {
-                return from_arrays(keys, keys.map(function (k){ return vals[k] }))
-            }
-        }
-        err('too many arguments')
-    }
 }
 
 module.exports = obj
