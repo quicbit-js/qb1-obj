@@ -4,8 +4,13 @@ var obj = require('.')
 test('create', function (t) {
     t.table_assert([
         [ 'args',                               'exp' ],
-        [ [['a',1,'b',2]],                  '{a:1,b:2}' ],
-        [ [['b','a'],{a:1,b:2}],                '{b:2,a:1}' ],
+        [ [['a',1,'b',2]],                      '{a:1,b:2}' ],
+        [ [['c','b','a'],{a:1,b:2,c:3}],        '{c:3,b:2,a:1}' ],
+        [ [['c','x','a','b'],{a:1,b:2,c:3}],    '{c:3,a:1,b:2}' ],          // undefined is ignored (x)
+        [ [['c','b'],{a:1,b:2,c:3}],            '{c:3,b:2}' ],
+        [ [['a','b','c'],[1,2,3]],              '{a:1,b:2,c:3}' ],
+        [ [['a','c'],[1,2,3]],                  '{a:1,c:2}' ],
+        [ [['a','c','c','c'],[1,2,3]],          '{a:1,c:3}' ],              // key #3 has precedence.  key #4 ignored.
         [ [['a','b'],[null,'N']],               "{a:N,b:'N'}" ],
     ], function (args) {
         return obj.apply(null, args).toString({name:'short'})

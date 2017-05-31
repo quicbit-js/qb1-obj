@@ -62,7 +62,8 @@ function obj() {
             var vals = arguments[1]
             typeof vals === 'object' || err('illegal argument: ' + vals)
             if (Array.isArray(vals)) {
-                while(i < a0.length) { ret.put(a0[i], vals[i]); i++ }
+                var len = Math.min(a0.length, vals.length)
+                while(i < len) { ret.put(a0[i], vals[i]); i++ }
             } else {
                 while(i < a0.length) { ret.put(a0[i], vals[a0[i]]); i++ }
             }

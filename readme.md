@@ -5,7 +5,7 @@ may be rearranged into any order desired.
 
 A mind-bendingly simple implementation.
 
-(qb1-obj purposefully gives direct access to keys - see [comment](#is-this-safe) below)
+qb1-obj gives direct access to keys (on purpose) - see [comment](#is-this-safe) below
 
 ## Install
 
@@ -78,6 +78,25 @@ of the object values.
     
     > {a:nul,b:'hi'}
 
+## Construction
+
+qb-obj has a few convenient constructors.  The following are all equivalent:
+    
+    var obj = require('qb-obj')
+
+    var o = obj(['a', 1, 'b', 2, 'c', 3])
+    
+    > {a:1,b:2,c:3}
+    
+    obj(['a','b','c'], [1,2,3]).str()
+    
+    > {a:1,b:2,c:3}
+    
+    obj(['a','b','c'], {a:1,b:2,c:3}).str()
+
+    > {a:1,b:2,c:3}
+    
+In the last cases, the keys are used to select values
 
 ## Is this safe?
 
