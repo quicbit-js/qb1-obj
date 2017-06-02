@@ -1,5 +1,5 @@
 var test = require('test-kit').tape()
-var obj = require('.')
+var qbobj = require('.')
 
 test('create', function (t) {
     t.table_assert([
@@ -13,13 +13,14 @@ test('create', function (t) {
         [ [['a','c'],[1,2,3]],                  '{a:1,c:2}' ],
         [ [['a','c','c','c'],[1,2,3]],          '{a:1,c:3}' ],              // key #3 has precedence.  key #4 ignored.
         [ [['a','b'],[null,'N']],               "{a:N,b:'N'}" ],
+        [ [qbobj([{a:1},{b:2}])],               '{a:1,b:2}'],
     ], function (args) {
-        return obj.apply(null, args).toString({name:'short'})
+        return qbobj.apply(null, args).toString({name:'short'})
     })
 })
 
 test('put, remove, length', function (t) {
-    var o = obj()
+    var o = qbobj()
     t.equal(o.length, 0)
     o.put('x', 99)
     o.put('y', null)
@@ -50,7 +51,7 @@ test('errors', function (t) {
         [ [ [{}] ],                                 /expected 1 item/ ],
         [ [ [3] ],                                  /illegal argument/ ],
     ], function (args) {
-        return obj.apply(null, args)
+        return qbobj.apply(null, args)
     }, {assert:'throws'})
 
 })

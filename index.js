@@ -5,6 +5,7 @@ function Obj(keys, vals) {
     this.vals = vals
 }
 Obj.prototype = {
+    type: 'qbobj',
     get length() {
         return this.keys.length
     },
@@ -52,6 +53,9 @@ function err(msg) { throw Error(msg) }
 function obj(a1, a2) {
     var ret = new Obj([],{})
     if (a1) {
+        if (a1.type === 'qbobj') {
+            return a1
+        }
         Array.isArray(a1) || err('illegal argument: ' + a1)
         var i = 0
         if (a2) {
