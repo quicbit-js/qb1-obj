@@ -50,7 +50,7 @@ Obj.prototype = {
 function err(msg) { throw Error(msg) }
 
 function obj(a1, a2) {
-    var ret = new Obj([],[])
+    var ret = new Obj([],{})
     if (a1) {
         Array.isArray(a1) || err('illegal argument: ' + a1)
         var i = 0
