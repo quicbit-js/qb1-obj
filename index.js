@@ -51,7 +51,7 @@ Obj.prototype = {
 function err(msg) { throw Error(msg) }
 
 function obj(a1, a2) {
-    var ret = new Obj([],{})
+    var ret = new Obj([],{})        // note - we could use an array for the second argument to store integer keys more efficiently, if useful.
     if (a1) {
         if (a1.type === 'qbobj') {
             return a1
