@@ -48,29 +48,25 @@ Obj.prototype = {
 
 function err(msg) { throw Error(msg) }
 
-function obj() {
+function obj(a1, a2) {
     var ret = new Obj([],[])
-    if (arguments.length > 0) {
-        var a0 = arguments[0]
-        Array.isArray(a0) || err('illegal argument: ' + a0)
+    if (a1) {
+        Array.isArray(a1) || err('illegal argument: ' + a1)
         var i = 0
-        if (arguments.length === 1) {
-            // from tuples
-            while (i < a0.length) { ret.put(a0[i], a0[i+1]); i += 2 }
-        } else if (arguments.length === 2) {
-            // from keys & vals array or object
-            var vals = arguments[1]
-            typeof vals === 'object' || err('illegal argument: ' + vals)
-            if (Array.isArray(vals)) {
-                var len = Math.min(a0.length, vals.length)
-                while(i < len) { ret.put(a0[i], vals[i]); i++ }
+        if (a2) {
+            // create from keys (array) and vals (array or object)
+            typeof a2 === 'object' || err('illegal argument: ' + a2)
+            if (Array.isArray(a2)) {
+                var len = Math.min(a1.length, a2.length)
+                while(i < len) { ret.put(a1[i], a2[i]); i++ }
             } else {
-                while(i < a0.length) { ret.put(a0[i], vals[a0[i]]); i++ }
+                while(i < a1.length) { ret.put(a1[i], a2[a1[i]]); i++ }
             }
         } else {
-            err('too many arguments')
+            // one arg: create from single array of alternating pairs
+            while (i < a1.length) { ret.put(a1[i], a1[i+1]); i += 2 }
         }
-    }
+    } // else return empty obj
     return ret
 }
 

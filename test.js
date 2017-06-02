@@ -4,6 +4,7 @@ var obj = require('.')
 test('create', function (t) {
     t.table_assert([
         [ 'args',                               'exp' ],
+        // [ [[{a:1},{b:2}]],                        '{a:1,b:2}' ],
         [ [['a',1,'b',2]],                      '{a:1,b:2}' ],
         [ [['c','b','a'],{a:1,b:2,c:3}],        '{c:3,b:2,a:1}' ],
         [ [['c','x','a','b'],{a:1,b:2,c:3}],    '{c:3,a:1,b:2}' ],          // undefined is ignored (x)
@@ -45,7 +46,6 @@ test('errors', function (t) {
         [ 'args',                                   'exp' ],
         [ [[],5],                                   /illegal argument/ ],
         [ [5],                                      /illegal argument/ ],
-        [ [[],[],[]],                               /too many arguments/ ],
     ], function (args) {
         return obj.apply(null, args)
     }, {assert:'throws'})
