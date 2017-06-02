@@ -12,6 +12,7 @@ Obj.prototype = {
         return this.vals[k]
     },
     put: function (k, v) {
+        typeof k === 'string' || err('bad key: ' + k)
         if (v === undefined) { return this.remove(k) }
         var prev = this.vals[k]
         if (prev === undefined) {
@@ -63,8 +64,23 @@ function obj(a1, a2) {
                 while(i < a1.length) { ret.put(a1[i], a2[a1[i]]); i++ }
             }
         } else {
-            // one arg: create from single array of alternating pairs
-            while (i < a1.length) { ret.put(a1[i], a1[i+1]); i += 2 }
+            // one argument
+            switch (typeof a1[0]) {
+                case 'string':
+                    // create from array of alternating pairs
+                    while (i < a1.length) { ret.put(a1[i], a1[i+1]); i += 2 }
+                    break
+                case 'object':
+                    // create from array of objects
+                    a1.forEach(function (row) {
+                        var keys = Object.keys(row)
+                        keys.length === 1 || err('expected 1 item, but got: ' + keys)
+                        ret.put(keys[0], row[keys[0]])
+                    })
+                    break
+                default:
+                    err('illegal argument: ' + a1[0])
+            }
         }
     } // else return empty obj
     return ret
