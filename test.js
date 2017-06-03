@@ -54,12 +54,22 @@ test('vals', function (t) {
 
 test('length', function (t) {
     t.table_assert([
-        [ 'o',                      'exp' ],
-        [ {},                          0 ],
-        [ {a:undefined},               0 ],
-        [ {a:77,b:undefined},          1 ],
+        [ 'o',                          'exp' ],
+        [ {},                           0 ],
+        [ {a:undefined},                0 ],
+        [ {a:77,b:undefined},           1 ],
     ], function (o) {
-            return obj.len(obj(o))
+        return obj.len(obj(o))
+    })
+})
+
+test('map', function (t) {
+    t.table_assert([
+        [ 'o',                      'fn',                                   'exp' ],
+        [ {},                       null,                                   {} ],
+        [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {1:3,2:15,3:41} ],
+    ], function (o, fn) {
+        return obj.map(obj(o), fn)
     })
 })
 

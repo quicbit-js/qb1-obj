@@ -35,6 +35,14 @@ obj.vals = function (o) {
     }
     return ret
 }
+obj.map = function (o, fn) {
+    var ret = {}
+    var keys = Object.keys(o)
+    for (var i=0; i<keys.length; i++) {
+        ret[keys[i]] = fn(keys[i], o[keys[i]], i)
+    }
+    return ret
+}
 obj.put = put
 
 module.exports = obj
