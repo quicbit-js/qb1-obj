@@ -46,7 +46,30 @@ test('walk', function (t) {
         [ {a:{x:1,y:2},b:[7,8,9]},          [],         null,     [ 'a.0:{2}', 'a/x.0:1', 'a/y.1:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],
         [ {a:{x:fn,y:2},b:[7,8,9]},         [],         null,     [ 'a.0:{2}', 'a/y.0:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],  // ignore object functions
         [ [],                               [],         null,     [] ],
+        [ [[[]]],                           [],         null,     [ '0:[1]', '0/0:[0]' ] ],
+        [ [[{}]],                           [],         null,     [ '0:[1]', '0/0:{0}' ] ],
         [ [7,8,9],                          [],         null,     [ '0:7', '1:8', '2:9' ] ],
+    ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
+})
+
+test('walk - key_select', function (t) {
+    function ks(regex, depth) {
+        return function (k, path) {
+            return path.length !== depth || regex.test(k)
+        }
+    }
+    t.table_assert([
+        [ 'o',                              'init',     'opt',                       'exp' ],
+        [ {},                               ['first'],  {key_select: ks(/a/,0)},     [ 'first' ] ],
+        [ {a:1},                            ['first'],  {key_select: ks(/a/,0)},     [ 'first', 'a.0:1' ] ],
+        [ {a:1, b:'foo', c:true, d:null},   [],         {key_select: ks(/b/,1)},     [ 'b.1:foo' ] ],
+        [ {a:{x:1,y:2}},                    [],         {key_select: ks(/x/,2)},     [ 'a.0:{2}', 'a/x.0:1' ] ],
+        [ {a:{x:1,y:2}},                    [],         {key_select: ks(/y/,2)},     [ 'a.0:{2}', 'a/y.1:2' ] ],
+        // [ {a:{x:1,y:2}, b:{z:3}},           [],         null,     [ 'a.0:{2}', 'a/x.0:1', 'a/y.1:2', 'b.1:{1}', 'b/z.0:3' ] ],
+        // [ {a:{x:1,y:2},b:[7,8,9]},          [],         null,     [ 'a.0:{2}', 'a/x.0:1', 'a/y.1:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],
+        // [ {a:{x:fn,y:2},b:[7,8,9]},         [],         null,     [ 'a.0:{2}', 'a/y.0:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],  // ignore object functions
+        // [ [],                               [],         null,     [] ],
+        // [ [7,8,9],                          [],         null,     [ '0:7', '1:8', '2:9' ] ],
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
 })
 

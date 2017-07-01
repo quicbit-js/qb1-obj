@@ -1,6 +1,3 @@
-function err(msg) { throw Error(msg) }
-
-
 // walk: iterate over an object (or array) and its nested values calling the given callback for each.  functions are skipped/ignored.
 //
 //   o          - the object to walk - which actually can be any value, array, string, number etc.
@@ -78,32 +75,32 @@ function walk_container (is_arr, container, cb, init, opt, path, control) {
     var keys_or_vals = is_arr ? container : Object.keys(container)
     var pathi = path.length
     var carry = init
-    var skipped = 0
+    var ignored = 0
     for (var i = 0; i < keys_or_vals.length; i++) {
         var k
         var v
         if (is_arr) {
             k = null
-            v = container[i]
             path[pathi] = i
+            v = container[i]
         } else {
             k = keys_or_vals[i]
+            path[pathi] = k
             if (opt.key_select && !opt.key_select(k, path)) {
                 continue
             }
             v = container[k]
-            path[pathi] = k
         }
         var tcode = typecode(v, is_arr)
         switch (tcode) {
             case TCODE_FUN: // ignore functions
-                skipped++
+                ignored++
                 continue
             case TCODE.ERR:
                 v = {msg: 'unexpected value', val: v}
         }
 
-        carry = cb(carry, k, i-skipped, tcode, v, path, control)
+        carry = cb(carry, k, i-ignored, tcode, v, path, control)
         switch (control.walk) {
             case 'continue':
                 if (tcode == TCODE.ARR || tcode === TCODE.OBJ) {
@@ -118,7 +115,7 @@ function walk_container (is_arr, container, cb, init, opt, path, control) {
                 break
         }
     }
-    if (path.length >= pathi) {
+    if (path.length > pathi) {
         path.length = pathi
     }
     return carry
