@@ -1,8 +1,8 @@
 # qb1-obj
 
-**version 2.0 makes a drastic (and breaking) improvement to handling ordered objects**  Since only 
+**version 2.0 makes a breaking change to handling ordered objects**  Since only 
 IE has object order issues (and only when deleting and re-inserting) qb1 will use normal
-javascript objects.  So this module now only has methods to work with normal objects.
+javascript objects.  So this module has been reduced to a few methods for normal objects.
 
 ## Install
 

@@ -1,43 +1,64 @@
 var test = require('test-kit').tape()
-var str = require('qb1-serial-plain')
 var obj = require('.')
+var TCODE = obj.tcode
 
-test('create', function (t) {
+function path_and_val (carry, k, i, tcode, v, path) {
+    var vstr
+    switch (tcode) {
+        case TCODE.ARR: vstr = '[' + v.length + ']'; break
+        case TCODE.OBJ: vstr = '{' + Object.keys(v).filter(function (k){ return typeof(obj[k] !== 'function')}).length + '}'; break
+        case TCODE.ERR: vstr = '!' + v.msg + ':' + v.val; break
+        case TCODE.BOO: vstr = v === true ? 'T' : 'F'; break
+        case TCODE.NUM: case TCODE.STR: vstr = String(v); break
+        case TCODE.NUL: vstr = 'N'; break
+        default:
+            throw Error('unexpected type code: ' + tcode)
+    }
+    var last = path[path.length - 1]
+    var pstr = path.join('/')
+    if (k === null) {
+        last === i || err('path does not match index: ' + i + ' and ' + pstr)
+    } else {
+        last === k || err('path does not match key: ' + k + ' and ' + pstr)
+        pstr += '.' + i     // add index
+    }
+    carry.push(pstr + ':' + vstr)
+    return carry
+}
+
+test('walk', function (t) {
+    var fn = function phooey() {}
     t.table_assert([
-        [ 'arg1',                   'arg2',                'exp' ],
-        [ null,                     null,                  '{}' ],
-        [ {a:3,b:4,c:null},         null,                  '{a:3,b:4,c:N}' ],
-        [ {a:1,b:2,c:3},            ['c','b','a'],         '{c:3,b:2,a:1}' ],
-        [ {a:1,b:2,c:3},            ['c','x','a','b'],     '{c:3,a:1,b:2}' ],          // undefined is ignored (x)
-        [ {a:1,b:2,c:3},            ['c','b'],             '{c:3,b:2}' ],
-        [ ['a','b','c'],            [1,2,3],               '{a:1,b:2,c:3}' ],
-        [ ['a','c'],                [1,2,3],               '{a:1,c:2}' ],
-        [ ['a','c','c','c'],        [1,2,3],               '{a:1,c:3}' ],              // key #3 has precedence.  key #4 ignored.
-        [ ['a','b'],                [null,'N'],            "{a:N,b:'N'}" ],
-    ], function (arg1, arg2) {
-        return str(obj(arg1, arg2), {name: 'shortname'})
-    })
+        [ 'o',                              'init',   'opt',   'exp' ],
+        [ {},                               [],       null,     [] ],
+        [ {a:1},                            [],       null,     [ 'a.0:1' ] ],
+        [ {a:1, b:'foo', c:true, d:null},   [],       null,     [ 'a.0:1', 'b.1:foo', 'c.2:T', 'd.3:N' ] ],
+        [ {a:1, b:undefined},               [],       null,     [ 'a.0:1', 'b.1:N' ] ],
+        [ {a:{},b:[],c:3},                  [],       null,     [ 'a.0:{0}', 'b.1:[0]', 'c.2:3' ] ],
+        [ {a:{x:1,y:2}},                    [],       null,     [ 'a.0:{2}', 'a/x.0:1', 'a/y.1:2' ] ],
+        [ {a:{x:1,y:2}, b:{z:3}},           [],       null,     [ 'a.0:{2}', 'a/x.0:1', 'a/y.1:2', 'b.1:{1}', 'b/z.0:3' ] ],
+        [ {a:{x:1,y:2},b:[7,8,9]},          [],       null,     [ 'a.0:{2}', 'a/x.0:1', 'a/y.1:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],
+        [ {a:{x:fn,y:2},b:[7,8,9]},         [],       null,     [ 'a.0:{2}', 'a/y.0:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],  // ignore object functions
+        [ [],                               [],       null,     [] ],
+        [ [7,8,9],                          [],       null,     [ '0:7', '1:8', '2:9' ] ],
+    ], function (o, init, opt) { return obj.walk(o, path_and_val, init, opt)} )
 })
 
-test('put', function (t) {
+test('walk errors', function (t) {
+    var fn = function chewy() {}
     t.table_assert([
-        [ 'o',                   'k',        'v',                'exp' ],
-        [ {},                    'a',        7,                  '{a:7}' ],
-        [ {a:undefined},         'a',        undefined,          '{}' ],
-        [ {a:77,b:undefined},    'a',        undefined,          '{}']
-    ], function (o, k, v) {
-        return str(obj.put(obj(o), k, v))
-    })
+        [ 'o',                              'init',   'opt',   'exp' ],
+        [ [7,fn,9],                          [],       null,    [ '0:7', '1:!unexpected value:function chewy() {}', '2:9' ] ],
+    ], function (o, init, opt) { return obj.walk(o, path_and_val, [], opt)} )
 })
 
 test('keys', function (t) {
     t.table_assert([
         [ 'o',                      'exp' ],
         [ {},                          [] ],
-        [ {a:undefined},               [] ],
-        [ {a:77,b:undefined},          ['a'] ],
+        [ {a:1,b:2},               ['a','b'] ],
     ], function (o) {
-        return obj.keys(obj(o))
+        return obj.keys(o)
     })
 })
 
@@ -45,10 +66,9 @@ test('vals', function (t) {
     t.table_assert([
         [ 'o',                      'exp' ],
         [ {},                          [] ],
-        [ {a:undefined},               [] ],
-        [ {a:77,b:undefined},          [77] ],
+        [ {a:1,b:2,c:null},               [1,2,null] ],
     ], function (o) {
-        return obj.vals(obj(o))
+        return obj.vals(o)
     })
 })
 
@@ -56,10 +76,9 @@ test('length', function (t) {
     t.table_assert([
         [ 'o',                          'exp' ],
         [ {},                           0 ],
-        [ {a:undefined},                0 ],
-        [ {a:77,b:undefined},           1 ],
+        [ {a:1,b:2},                2 ],
     ], function (o) {
-        return obj.len(obj(o))
+        return obj.len(o)
     })
 })
 
@@ -69,17 +88,8 @@ test('map', function (t) {
         [ {},                       null,                                   {} ],
         [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {1:3,2:15,3:41} ],
     ], function (o, fn) {
-        return obj.map(obj(o), fn)
+        return obj.map(o, fn)
     })
 })
 
-test('errors', function (t) {
-    t.table_assert([
-        [ 'args',                                   'exp' ],
-        [ [ [], 5 ],                                /illegal argument/ ],
-    ], function (args) {
-        return obj.apply(null, args)
-    }, {assert:'throws'})
-
-})
 // var v = {'a':{'len':30, 'vals':[null,4,5,'six']}, 'qb': "certainly"}
