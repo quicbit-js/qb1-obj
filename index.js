@@ -20,10 +20,10 @@ function err(msg) { throw Error(msg) }
 //                      'skip': continues the walk, but skip this value's children.  makes sense only for objects and arrays.
 //   )
 //
-//   options       (object - optional)
-//
-//      init           (any - optional) same as Array.prototype.reduce(cb, init).  take care to use 'undefined' and not 'null'
+//   init           (any - optional) same as Array.prototype.reduce(cb, init).  take care to use 'undefined' and not 'null'
 //                        to get the init set to the first value in the object.
+//
+//   options        (object - optional)
 //
 //      typ_select:     inclusive list of types to include in the walk (callback): [ obj, arr, str, int, num, boo, nul ]
 //
@@ -116,8 +116,6 @@ function walk_container (is_arr, container, cb, init, opt, path, control) {
                 // children skipped, continue with others
                 control.walk = 'continue'
                 break
-            default:
-                err('illegal option for control.walk: ' + control.walk)
         }
     }
     if (path.length >= pathi) {
