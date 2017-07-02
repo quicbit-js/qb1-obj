@@ -152,6 +152,16 @@ test('map', function (t) {
     })
 })
 
+test('mapk', function (t) {
+    t.table_assert([
+        [ 'o',                      'fn',                                   'exp' ],
+        [ {},                       null,                                   {} ],
+        [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {3:3,15:7,41:13} ],
+    ], function (o, fn) {
+        return obj.mapk(o, fn)
+    })
+})
+
 test('oo_put', function (t) {
     t.table_assert([
         [ 'o',              'k1',   'k2',   'v',    'exp' ],

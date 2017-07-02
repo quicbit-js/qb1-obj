@@ -147,11 +147,22 @@ module.exports = {
     oo_get: function (o, k1, k2) {
         return o[k1] && o[k1][k2]
     },
+    // return a new object with the same keys, but new values
     map: function (o, fn) {
         var ret = {}
         var keys = Object.keys(o)
         for (var i=0; i<keys.length; i++) {
             ret[keys[i]] = fn(keys[i], o[keys[i]], i)
+        }
+        return ret
+    },
+    // return a new object with same values, but new key names (in same insertion order)
+    mapk: function (o, fn) {
+        var ret = {}
+        var keys = Object.keys(o)
+        for (var i=0; i<keys.length; i++) {
+            var v = o[keys[i]]
+            ret[fn(keys[i], v, i)] = v
         }
         return ret
     },
