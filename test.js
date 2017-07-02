@@ -152,4 +152,36 @@ test('map', function (t) {
     })
 })
 
-// var v = {'a':{'len':30, 'vals':[null,4,5,'six']}, 'qb': "certainly"}
+test('oo_put', function (t) {
+    t.table_assert([
+        [ 'o',              'k1',   'k2',   'v',    'exp' ],
+        [ {},               'a',    'b',    7,      [undefined, {a:{b:7}}] ],
+        [ {a:null},         'a',    'b',    7,      [undefined, {a:{b:7}}] ],
+        [ {a:{b:7}},        'a',    'b',    8,      [7, {a:{b:8}}] ],
+        [ {a:{b:7}},        'x',    'b',    2,      [undefined, {a:{b:7},x:{b:2}}] ],
+
+    ], function (o, k1, k2, v) { var prev = obj.oo_put(o, k1, k2, v); return [prev, o] } )
+})
+
+test('oo_get', function (t) {
+    t.table_assert([
+        [ 'o',              'k1',   'k2',  'exp' ],
+        [ {},               'a',    'b',   undefined ],
+        [ {a:8},            'a',    'b',   undefined ],
+        [ {a:{b:null}},            'a',    'b',   null ],
+        [ {a:{b:4}},            'a',    'b',   4 ],
+
+    ], obj.oo_get )
+})
+
+test('oa_push', function (t) {
+    t.table_assert([
+        [ 'o',              'k',    'v',    'exp' ],
+        [ {},               'a',    null,   {a:[null]} ],
+        [ {a:[]},           'a',    7,      {a:[7]} ],
+        [ {a:[3]},          'a',    7,      {a:[3,7]} ],
+        [ {a:[3],b:[2]},    'a',    7,      {a:[3,7],b:[2]} ],
+
+    ], function (o, k, v) { obj.oa_push(o,k,v); return o } )
+})
+

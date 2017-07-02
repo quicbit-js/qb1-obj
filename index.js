@@ -132,6 +132,21 @@ module.exports = {
         }
         return ret
     },
+    oa_push: function (o, k, v) {
+        var a = o[k]
+        if (!a) { o[k] = a = [] }
+        a.push(v)
+    },
+    oo_put: function (o, k1, k2, v) {
+        var oo = o[k1]
+        if (!oo) { o[k1] = oo = {} }
+        var prev = oo[k2]
+        oo[k2] = v
+        return prev
+    },
+    oo_get: function (o, k1, k2) {
+        return o[k1] && o[k1][k2]
+    },
     map: function (o, fn) {
         var ret = {}
         var keys = Object.keys(o)
