@@ -1,4 +1,6 @@
-// walk: iterate over an object (or array) and its nested values calling the given callback for each.  functions are skipped/ignored.
+// walk: iterate over any javascript value (object, array, string, number, null...) and all nested values invoking a
+// callback.  Object function properties are ignored.  Functions in arrays or passed in as the first value are forwarded
+// as an error (tcode = tcode.ERR) to the callback.
 //
 //   o          - the object to walk - which actually can be any value, array, string, number etc.
 //
@@ -12,7 +14,7 @@
 //       path,          - an array holding keys/indexes of the current path (values are changed-in-place.  make a copy to preserve values)
 //       control        - an object that controls the iteration.  setting the 'control.walk' property to:
 //
-//                      'continue': continue the walk over all values (this is the default)
+//                      'continue': continues the walk over all values (this is the default)
 //                      'stop': stops the walk (returning the value that this function returns)
 //                      'skip': continues the walk, but skip this value's children.  makes sense only for objects and arrays.
 //   )
@@ -31,8 +33,25 @@
 //                      note that path also has the key as its last value.
 //
 //
-function walk (o, cb, init, opt) {
-    return walk_container(Array.isArray(o), o, cb, init, opt || {}, [], {walk: 'continue'})
+function walk (v, cb, init, opt) {
+    opt = opt || {}
+    var control = { walk: 'continue' }
+
+    // callback with root
+    var tcode = typecode(v)
+    if (tcode === TCODE_FUN) {
+        tcode = TCODE.ERR
+        v = { msg: 'illegal value (function)', val: v }
+    }
+    var carry = cb(init, null, 0, tcode, v, [], control)
+    if (control.walk !== 'continue') {
+        return carry
+    }
+
+    if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
+        carry = walk_container(tcode === TCODE.OBJ, v, cb, carry, opt, [], control)
+    }
+    return carry
 }
 
 var TCODE = {
@@ -46,16 +65,8 @@ var TCODE = {
 }
 var TCODE_FUN = 7       // not public - never passed to callback
 
-function typecode (v, is_arr) {
+function typecode (v) {
     switch (typeof v) {
-        case 'object':
-            if (v === null) {
-                return TCODE.NUL
-            } else if (Array.isArray(v)) {
-                return TCODE.ARR
-            } else {
-                return TCODE.OBJ
-            }
         case 'string':
             return TCODE.STR
         case 'number':
@@ -65,58 +76,71 @@ function typecode (v, is_arr) {
         case 'undefined':
             return TCODE.NUL
         case 'function':
-            return is_arr ? TCODE.ERR : TCODE_FUN
+            return TCODE_FUN
         default:
-            return TCODE.ERR    // this would only happen for custom host objects in certain environments
+            // default case handles 'object' including host objects that may occur in certain environments
+            return v === null ? TCODE.NUL : (Array.isArray(v) ? TCODE.ARR : TCODE.OBJ)
     }
 }
 
-function walk_container (is_arr, container, cb, init, opt, path, control) {
-    var keys_or_vals = is_arr ? container : Object.keys(container)
-    var pathi = path.length
-    var carry = init
+var STOP_OBJ = {carry: null }
+function walk_container (in_object, container, cb, carry, opt, path, control) {
+    var keys_or_vals = in_object ? Object.keys(container) : container
+    var depth = path.length
     var ignored = 0
     for (var i = 0; i < keys_or_vals.length; i++) {
         var k
         var v
-        if (is_arr) {
-            k = null
-            path[pathi] = i
-            v = container[i]
-        } else {
+        if (in_object) {
             k = keys_or_vals[i]
-            path[pathi] = k
+            path[depth] = k
             if (opt.key_select && !opt.key_select(k, path)) {
                 continue
             }
             v = container[k]
+        } else {
+            k = null
+            path[depth] = i
+            v = container[i]
         }
-        var tcode = typecode(v, is_arr)
-        switch (tcode) {
-            case TCODE_FUN: // ignore functions
+
+        var tcode = typecode(v)
+        if (tcode === TCODE_FUN) {
+            if (in_object) {
                 ignored++
                 continue
-            case TCODE.ERR:
-                v = {msg: 'unexpected value', val: v}
+            } else {
+                tcode = TCODE.ERR
+                v = { msg: 'unexpected function.  functions are only allowed as object properties', val: v }
+            }
         }
 
         carry = cb(carry, k, i-ignored, tcode, v, path, control)
         switch (control.walk) {
             case 'continue':
-                if (tcode == TCODE.ARR || tcode === TCODE.OBJ) {
-                    walk_container(tcode === TCODE.ARR, v, cb, carry, opt, path, control)
+                // walk children
+                if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
+                    carry = walk_container(tcode === TCODE.OBJ, v, cb, carry, opt, path, control)
+                    if (carry === STOP_OBJ) {
+                        return depth === 0 ? STOP_OBJ.carry : STOP_OBJ          // unwrap carry when leaving (depth = 1)
+                    }
                 }
                 break
             case 'stop':
-                return carry
+                if (depth === 0) {
+                    return carry
+                } else {
+                    STOP_OBJ.carry = carry
+                    return STOP_OBJ
+                }
             case 'skip':
-                // children skipped, continue with others
+                // children not walked, continue with next peer value
                 control.walk = 'continue'
                 break
         }
     }
-    if (path.length > pathi) {
-        path.length = pathi
+    if (path.length > depth) {
+        path.length = depth
     }
     return carry
 }
