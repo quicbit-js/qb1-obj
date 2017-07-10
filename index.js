@@ -89,21 +89,20 @@ function walk_container (in_object, container, cb, carry, opt, path, control) {
     var depth = path.length
     var ignored = 0
     for (var i = 0; i < keys_or_vals.length; i++) {
-        var k
-        var v
+        var k   // the object key, if in object
+        var ki  // the key or index actually used (array index or object key)
         if (in_object) {
             k = keys_or_vals[i]
-            path[depth] = k
-            if (opt.key_select && !opt.key_select(k, path)) {
-                continue
-            }
-            v = container[k]
+            ki = k
         } else {
             k = null
-            path[depth] = i
-            v = container[i]
+            ki = i
         }
-
+        path[depth] = ki
+        if (in_object && opt.key_select && !opt.key_select(k, path)) {
+            continue
+        }
+        var v = container[ki]
         var tcode = typecode(v)
         if (tcode === TCODE_FUN) {
             if (in_object) {
