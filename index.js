@@ -57,11 +57,14 @@ function walk (v, cb, init, opt) {
         return carry
     }
 
-    var ncarry = carry
     if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
-        ncarry = walk_container(v, cb, carry, opt, [], control)
+        if (opt.map_carry) {
+            walk_container(v, cb, null, opt, [], control, carry)
+        } else {
+            carry = walk_container(v, cb, carry, opt, [], control)
+        }
     }
-    return opt.map_carry ? carry : ncarry
+    return carry
 }
 
 var TCODE = {
@@ -93,14 +96,13 @@ function typecode (v) {
     }
 }
 
-// if opt.map_carry, then carry is the target container (array or object)
+// map_dst, if set, will be populated with results from cb()
 var STOP_OBJ = {carry: null }
-function walk_container (container, cb, carry, opt, path, control) {
+function walk_container (container, cb, carry, opt, path, control, map_dst) {
     var in_object = !Array.isArray(container)
     var keys_or_vals = in_object ? Object.keys(container) : container
     var depth = path.length
     var ignored_prop = 0
-    var ncarry = carry
     for (var i = 0; i < keys_or_vals.length; i++) {
         var k   // the object key, if in object
         var ki  // the key or index actually used (array index or object key)
@@ -128,41 +130,42 @@ function walk_container (container, cb, carry, opt, path, control) {
         }
 
         if (opt.map_carry) {
-            ncarry = cb(carry, k, i-ignored_prop, tcode, v, path, control)
-            carry[ki] = ncarry
+            carry = cb(null, k, i-ignored_prop, tcode, v, path, control)
+            map_dst[ki] = carry
+            if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
+                walk_container(v, cb, null, opt, path, control, carry)
+            }
         } else {
-            ncarry = cb(ncarry, k, i-ignored_prop, tcode, v, path, control)
-        }
-        switch (control.walk) {
-            case 'continue':
-                // walk children
-                if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
-                    var wcarry = walk_container(v, cb, ncarry, opt, path, control)
-                    if (wcarry === STOP_OBJ) {
-                        return depth === 0 ? STOP_OBJ.carry : STOP_OBJ          // unwrap carry when leaving (depth = 1)
+            carry = cb(carry, k, i-ignored_prop, tcode, v, path, control)
+            switch (control.walk) {
+                case 'continue':
+                    // walk children
+                    if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
+                        carry = walk_container(v, cb, carry, opt, path, control)
+                        if (carry === STOP_OBJ) {
+                            return depth === 0 ? STOP_OBJ.carry : STOP_OBJ          // unwrap carry when leaving (depth = 1)
+                        }
                     }
-                    if (!opt.map_carry) {
-                        ncarry = wcarry
+                    break
+                case 'stop':
+                    if (depth === 0) {
+                        return carry
+                    } else {
+                        STOP_OBJ.carry = carry
+                        return STOP_OBJ
                     }
-                }
-                break
-            case 'stop':
-                if (depth === 0) {
-                    return ncarry
-                } else {
-                    STOP_OBJ.carry = ncarry
-                    return STOP_OBJ
-                }
-            case 'skip':
-                // children not walked, continue with next peer value
-                control.walk = 'continue'
-                break
+                case 'skip':
+                    // children not walked, continue with next peer value
+                    control.walk = 'continue'
+                    break
+            }
         }
     }
+
     if (path.length > depth) {
         path.length = depth
     }
-    return ncarry
+    return carry
 }
 
 module.exports = {

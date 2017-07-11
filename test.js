@@ -103,7 +103,7 @@ test('walk control', function (t) {
 })
 
 test('walk - map_carry in-place', function (t) {
-    var replace = function (regex, nv) {
+    var in_situ_cb = function (regex, nv) {
         return function (carry, k, i, tcode, v, path) {
             switch (tcode) {
                 case TCODE.ARR: case TCODE.OBJ:     return v
@@ -114,33 +114,34 @@ test('walk - map_carry in-place', function (t) {
 
     t.table_assert([
         [ 'o',                          'cb',                     'opt',            'exp' ],
-        [ {a:7},                        replace(/a/, 3),           {map_carry:1},   [true, {a:3}] ],
-        [ {a:{b:7}},                    replace(/b/, 3),           {map_carry:1},   [true, {a:{b:3}}] ],
-        [ {a:[7,8,9]},                  replace(/1/, 3),           {map_carry:1},   [true, {a:[7,3,9]}] ],
-        [ [7,8,9],                      replace(/1/, 3),           {map_carry:1},   [true, [7,3,9]] ],
+        [ {a:7},                        in_situ_cb(/a/, 3),           {map_carry:1},   [true, {a:3}] ],
+        [ {a:{b:7}},                    in_situ_cb(/b/, 3),           {map_carry:1},   [true, {a:{b:3}}] ],
+        [ {a:[7,8,9]},                  in_situ_cb(/1/, 3),           {map_carry:1},   [true, {a:[7,3,9]}] ],
+        [ [7,8,9],                      in_situ_cb(/1/, 3),           {map_carry:1},   [true, [7,3,9]] ],
     ], function (o, cb, opt) { var n = obj.walk(o, cb, null, opt); return [n === o, n]} )
 })
 
-// test('walk - map_carry', function (t) {
-//     var replace = function (regex, nv) {
-//         return function (carry, k, i, tcode, v, path) {
-//             console.log("'" + path.join('/') + "'")
-//             switch (tcode) {
-//                 case TCODE.ARR:     return []
-//                 case TCODE.OBJ:     return {}
-//                 default:            return regex.test(k || String(i)) ? nv : v
-//             }
-//         }
-//     }
-//
-//     t.table_assert([
-//         [ 'o',                          'cb',                   'init', 'opt',           'exp' ],
-//         [ {a:7},                        replace(/a/, 3),        {},     {map_carry:1},   [false, {a:3}] ],
-//         [ {a:{b:7}},                    replace(/b/, 3),        {},     {map_carry:1},   [false, {a:{b:3}}] ],
-//         [ {a:[7,8,9]},                  replace(/1/, 3),        {},     {map_carry:1},   [false, {a:[7,3,9]}] ],
-//         [ [7,8,9],                      replace(/1/, 3),        [],     {map_carry:1},   [false, [7,3,9]] ],
-//     ], function (o, cb, opt) { var n = obj.walk(o, cb, o, opt); return [n === o, n]} )
-// })
+test('walk - map_carry', function (t) {
+    var copy_cb = function (regex, nv) {
+        return function (carry, k, i, tcode, v, path) {
+            switch (tcode) {
+                case TCODE.ARR:     return []
+                case TCODE.OBJ:     return {}
+                default:            return regex.test(k || String(i)) ? nv : v
+            }
+        }
+    }
+
+    t.table_assert([
+        [ 'o',                          'cb',                   'init', 'opt',           'exp' ],
+        [ {},                           copy_cb(/a/, 3),        {},     {map_carry:1},   [false, {}] ],
+        [ {a:7},                        copy_cb(/a/, 3),        {},     {map_carry:1},   [false, {a:3}] ],
+        [ {a:{b:7}},                    copy_cb(/b/, 3),        {},     {map_carry:1},   [false, {a:{b:3}}] ],
+        [ {a:[7,8,9]},                  copy_cb(/1/, 3),        {},     {map_carry:1},   [false, {a:[7,3,9]}] ],
+        [ [],                           copy_cb(/a/, 3),        {},     {map_carry:1},   [false, []] ],
+        [ [7,8,9],                      copy_cb(/1/, 3),        [],     {map_carry:1},   [false, [7,3,9]] ],
+    ], function (o, cb, init, opt) { var n = obj.walk(o, cb, init, opt); return [n === o, n]} )
+})
 
 test('keys', function (t) {
     t.table_assert([
