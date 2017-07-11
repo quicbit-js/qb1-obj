@@ -130,10 +130,10 @@ test('walk - map_carry in-place', function (t) {
 
     t.table_assert([
         [ 'o',                          'cb',                     'opt',            'exp' ],
-        [ {a:7},                        in_situ_cb(/a/, 3),           {map_carry:1},   [true, {a:3}] ],
-        [ {a:{b:7}},                    in_situ_cb(/b/, 3),           {map_carry:1},   [true, {a:{b:3}}] ],
-        [ {a:[7,8,9]},                  in_situ_cb(/1/, 3),           {map_carry:1},   [true, {a:[7,3,9]}] ],
-        [ [7,8,9],                      in_situ_cb(/1/, 3),           {map_carry:1},   [true, [7,3,9]] ],
+        [ {a:7},                        in_situ_cb(/a/, 3),       {map_carry:1},   [true, {a:3}] ],
+        [ {a:{b:7}},                    in_situ_cb(/b/, 3),       {map_carry:1},   [true, {a:{b:3}}] ],
+        [ {a:[7,8,9]},                  in_situ_cb(/1/, 3),       {map_carry:1},   [true, {a:[7,3,9]}] ],
+        [ [7,8,9],                      in_situ_cb(/1/, 3),       {map_carry:1},   [true, [7,3,9]] ],
     ], function (o, cb, opt) { var n = obj.walk(o, cb, null, opt); return [n === o, n]} )
 })
 
@@ -186,8 +186,8 @@ test('keys', function (t) {
 test('vals', function (t) {
     t.table_assert([
         [ 'o',                      'exp' ],
-        [ {},                          [] ],
-        [ {a:1,b:2,c:null},               [1,2,null] ],
+        [ {},                       [] ],
+        [ {a:1,b:2,c:null},         [1,2,null] ],
     ], function (o) {
         return obj.vals(o)
     })
@@ -247,8 +247,8 @@ test('oo_get', function (t) {
         [ 'o',              'k1',   'k2',  'exp' ],
         [ {},               'a',    'b',   undefined ],
         [ {a:8},            'a',    'b',   undefined ],
-        [ {a:{b:null}},            'a',    'b',   null ],
-        [ {a:{b:4}},            'a',    'b',   4 ],
+        [ {a:{b:null}},     'a',    'b',   null ],
+        [ {a:{b:4}},        'a',    'b',   4 ],
 
     ], obj.oo_get )
 })
