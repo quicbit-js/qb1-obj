@@ -206,7 +206,7 @@ test('map', function (t) {
     t.table_assert([
         [ 'o',                      'fn',                                   'exp' ],
         [ {},                       null,                                   {} ],
-        [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {1:3,2:15,3:41} ],
+        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},         {1:3,2:15,3:41} ],
     ], obj.map)
 })
 
@@ -214,18 +214,21 @@ test('mapk', function (t) {
     t.table_assert([
         [ 'o',                      'fn',                                   'exp' ],
         [ {},                       null,                                   {} ],
-        [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {3:3,15:7,41:13} ],
+        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},         {3:3,15:7,41:13} ],
     ], obj.mapk)
 })
 
-test('map1', function (t) {
+test('mapw', function (t) {
     t.table_assert([
-        [ 'o',                      'fn',                                   'exp' ],
-        [ {},                       null,                                   {} ],
-        [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {3:3,15:7,41:13} ],
-    ], function (o, fn) {
-        return obj.mapk(o, fn)
-    })
+        [ 'o',                          'fn',                              'opt',           'exp' ],
+        [ {},                           null,                              null,            [false, {}] ],
+        [ {1:3,2:7,3:13},               function(k,v,i) {return k*v+i},    {in_situ:true},  [true,{1:3,2:15,3:41}] ],
+        [ {1:3,2:7,3:13},               function(k,v,i) {return k*v+i},    {in_situ:false}, [false,{1:3,2:15,3:41}] ],
+        [ {a:3,b:7,c:[5,9]},            function(k,v,i) {return v*(i+3)},  {in_situ:false}, [false,{a:9,b:28,c:[15,36]}] ],
+        [ {a:3,b:7,c:[{d:[1,3,5]},9]},  function(k,v,i) {return v*(i+3)},  {in_situ:false}, [false,{a:9,b:28,c:[{d:[3,12,25]},36]}] ],
+        [ [3,7,[{d:[1,3,5]},9]],        function(k,v,i) {return v*(i+3)},  {in_situ:false}, [false,[9,28,[{d:[3,12,25]},36]]] ],
+        [ [3,7,[{d:[1,3,5]},9]],        function(k,v,i) {return v*(i+3)},  {in_situ:true},  [true,[9,28,[{d:[3,12,25]},36]]] ],
+    ], function(o, fn, opt) { var n = obj.mapw(o, fn, opt); return [n === o, n] })
 })
 
 test('oo_put', function (t) {

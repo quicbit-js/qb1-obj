@@ -1,3 +1,5 @@
+var assign = require('qb-assign')
+
 // walk: iterate over any javascript value (object, array, string, number, null...) and all nested values invoking a
 // callback.  Object function properties are ignored.  Functions in arrays or passed in as the first value are forwarded
 // as an error (tcode = tcode.ERR) to the callback.
@@ -175,6 +177,25 @@ function walk_container (container, cb, carry, opt, path, control, map_dst) {
     return carry
 }
 
+function map_in_situ_cb(fn) {
+    return function (carry, k, i, tcode, v, path) {
+        switch (tcode) {
+            case TCODE.ARR: case TCODE.OBJ: return v
+            default:                        return fn(k == null ? i : k, v, i, path)
+        }
+    }
+}
+
+function map_copy_cb(fn) {
+    return function (carry, k, i, tcode, v, path) {
+        switch (tcode) {
+            case TCODE.ARR: return []
+            case TCODE.OBJ: return {}
+            default:        return fn(k == null ? i : k, v, i, path)
+        }
+    }
+}
+
 module.exports = {
     len: function (o) { return Object.keys(o).length },
     keys: function (o) { return Object.keys(o) },
@@ -236,33 +257,30 @@ module.exports = {
     // c            the container (array or object) to map
     //
     // fn
-    //      ki      array index (number) or object string (key)
-    //      v       the property value
-    //      i       the index of the property value (same as i for arrays)
+    //      ki      str|int      - array index (number) or object key (string)
+    //      v       !(arr|obj)   - the value of current leaf item (non-container)
+    //      i       int          - the index of the property value (same as i for arrays)
+    //      path    [str|int]    - the current location path (array - see walk function)
     //
     // opt
-    //      map             set to 'in-place' to modify all containers in place, or 'copy' to return new objects/arrays (the default)
+    //      in_situ         set to true to modify objects and arrays in place, false (the default) to create a new set of objects
     //      key_select      same as walk option
     //      typ_select      same as walk option
     //
 
-    // mapw: function (c, fn, opt) {
-    //     opt = opt || {}
-    //     opt.map = opt.map || ''
-    //     var in_place = opt && opt.map_in_place
-    //     return walk(
-    //         c,
-    //         function (carry, container, k, i, tcode, v, path, control) {
-    //             var ki = k === null ? i : k
-    //
-    //             if (in_place) {
-    //                 container[ki] = fn(ki, v, i)
-    //             }
-    //         },
-    //         in_place ? null : Array.isArray(a_or_o) ? [] : {},
-    //         opt
-    //     )
-    // },
+    mapw: function (c, fn, opt) {
+        opt = assign({}, opt)
+        opt.map_carry = true
+        var cb
+        var init = null
+        if (opt.in_situ) {
+            cb = map_in_situ_cb(fn)
+            init = Array.isArray(c) ? [] : {}
+        } else {
+            cb = map_copy_cb(fn)
+        }
+        return walk(c, cb, init, opt)
+    },
     tcode: TCODE,
     walk: walk,
 }

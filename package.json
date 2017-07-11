@@ -6,6 +6,9 @@
   "url": "https://github.com/quicbit-js/qb1-obj/issues",
   "email": "support@quicbit.com",
   "repository": "quicbit-js/qb1-obj",
+  "dependencies": {
+    "qb-assign": "^1.0.1"
+  },
   "devDependencies": {
     "qb1-serial-plain": "^1.0.3",
     "tape": "^4.6.3",
