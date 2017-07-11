@@ -115,7 +115,7 @@ test('walk control', function (t) {
         [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(1, 'stop'),   [],       null,    [ 'R:{2}', 'a.0:{1}' ] ],
         [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(2, 'stop'),   [],       null,    [ 'R:{2}', 'a.0:{1}', 'a/b.0:[1]'  ] ],
         [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(3, 'stop'),   [],       null,    [ 'R:{2}', 'a.0:{1}', 'a/b.0:[1]', 'a/b/0:{1}' ] ],
-    ], function (o, cb, init, opt) { return obj.walk(o, cb, init, opt)} )
+    ], obj.walk )
 })
 
 test('walk - map_carry in-place', function (t) {
@@ -137,7 +137,7 @@ test('walk - map_carry in-place', function (t) {
     ], function (o, cb, opt) { var n = obj.walk(o, cb, null, opt); return [n === o, n]} )
 })
 
-test('walk - map_carry', function (t) {
+test('walk - map_carry copy', function (t) {
     var copy_cb = function (regex, nv) {
         return function (carry, k, i, tcode, v) {
             switch (tcode) {
@@ -180,9 +180,7 @@ test('keys', function (t) {
         [ 'o',                      'exp' ],
         [ {},                       [] ],
         [ {a:1,b:2},                ['a','b'] ],
-    ], function (o) {
-        return obj.keys(o)
-    })
+    ], obj.keys)
 })
 
 test('vals', function (t) {
@@ -199,10 +197,9 @@ test('length', function (t) {
     t.table_assert([
         [ 'o',                          'exp' ],
         [ {},                           0 ],
-        [ {a:1,b:2},                2 ],
-    ], function (o) {
-        return obj.len(o)
-    })
+        [ {a:1,b:2},                    2 ],
+        [ [1,2,3],                      3 ],
+    ], obj.len)
 })
 
 test('map', function (t) {
@@ -210,12 +207,18 @@ test('map', function (t) {
         [ 'o',                      'fn',                                   'exp' ],
         [ {},                       null,                                   {} ],
         [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {1:3,2:15,3:41} ],
-    ], function (o, fn) {
-        return obj.map(o, fn)
-    })
+    ], obj.map)
 })
 
 test('mapk', function (t) {
+    t.table_assert([
+        [ 'o',                      'fn',                                   'exp' ],
+        [ {},                       null,                                   {} ],
+        [ {1:3, 2:7, 3:13},         function(k,v,i){return k*v+i},          {3:3,15:7,41:13} ],
+    ], obj.mapk)
+})
+
+test('map1', function (t) {
     t.table_assert([
         [ 'o',                      'fn',                                   'exp' ],
         [ {},                       null,                                   {} ],
