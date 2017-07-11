@@ -63,11 +63,27 @@ test('walk - key_select', function (t) {
     }
     t.table_assert([
         [ 'o',                              'init',     'opt',                       'exp' ],
-        [ {},                               ['first'],  {key_select: ks(/a/,0)},     [ 'first', 'R:{0}' ] ],
+        [ {},                               ['first'],  {key_select: ks(/a/,0)},     [ 'first', 'R:{0}' ] ],  // filter not applied (no keys at depth 0)
         [ {a:1},                            ['first'],  {key_select: ks(/a/,0)},     [ 'first', 'R:{1}', 'a.0:1' ] ],
         [ {a:1, b:'foo', c:true, d:null},   [],         {key_select: ks(/b/,1)},     [ 'R:{4}', 'b.1:foo' ] ],
         [ {a:{x:1,y:2}},                    [],         {key_select: ks(/x/,2)},     [ 'R:{1}', 'a.0:{2}', 'a/x.0:1' ] ],
         [ {a:{x:1,y:2}},                    [],         {key_select: ks(/y/,2)},     [ 'R:{1}', 'a.0:{2}', 'a/y.1:2' ] ],
+    ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
+})
+
+test('walk - typ_select', function (t) {
+    function ts(whichcode, depth) {
+        return function (tcode, path) {
+            return path.length !== depth || whichcode === tcode
+        }
+    }
+    t.table_assert([
+        [ 'o',                              'init',     'opt',                          'exp' ],
+        [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,-1)}, [ 'first', 'R:{0}' ] ], // filter not applied
+        [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,0)},  [ 'first' ] ],
+        [ {a:1},                            ['first'],  {typ_select: ts(TCODE.NUM,0)},  [ 'first','a.0:1' ] ],
+        [ {a:[1,2,3], b:true, d:null, e:7}, [],         {typ_select: ts(TCODE.NUM,1)},  [ 'R:{4}', 'e.3:7' ] ],
+        [ {a:[1,'b',3], b:true, d:null, e:7}, [],         {typ_select: ts(TCODE.NUM,2)},  [ 'R:{4}', 'a.0:[3]', 'a/0:1', 'a/2:3', 'b.1:T', 'd.2:N', 'e.3:7' ] ],
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
 })
 
@@ -123,7 +139,7 @@ test('walk - map_carry in-place', function (t) {
 
 test('walk - map_carry', function (t) {
     var copy_cb = function (regex, nv) {
-        return function (carry, k, i, tcode, v, path) {
+        return function (carry, k, i, tcode, v) {
             switch (tcode) {
                 case TCODE.ARR:     return []
                 case TCODE.OBJ:     return {}
@@ -143,11 +159,27 @@ test('walk - map_carry', function (t) {
     ], function (o, cb, init, opt) { var n = obj.walk(o, cb, init, opt); return [n === o, n]} )
 })
 
+test('walk - map_carry - replace containers', function (t) {
+    var dreplace = function (depth) {
+        return function (carry, k, i, tcode, v, path, control) {
+            return path.length === depth ? ('i=' + i) : v
+        }
+    }
+
+    t.table_assert([
+        [ 'o',                          'cb',                   'init', 'opt',           'exp' ],
+        [ {a:7},                        dreplace(0),            {},     {map_carry:1},   'i=0' ],
+        [ {a:7,b:8},                    dreplace(1),            {},     {map_carry:1},   {a:'i=0',b:'i=1'} ],
+        [ {a:{x:[7,8,9]},b:8},          dreplace(2),            {},     {map_carry:1},   {a:{x:'i=0'},b:8} ],
+        [ {a:{x:[7,8,9]},b:8},          dreplace(3),            {},     {map_carry:1},   {a:{x:['i=0','i=1','i=2' ]},b:8} ],
+    ], obj.walk )
+})
+
 test('keys', function (t) {
     t.table_assert([
         [ 'o',                      'exp' ],
-        [ {},                          [] ],
-        [ {a:1,b:2},               ['a','b'] ],
+        [ {},                       [] ],
+        [ {a:1,b:2},                ['a','b'] ],
     ], function (o) {
         return obj.keys(o)
     })

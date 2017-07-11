@@ -128,11 +128,18 @@ function walk_container (container, cb, carry, opt, path, control, map_dst) {
                 v = { msg: 'unexpected function.  functions are only allowed as object properties', val: v }
             }
         }
+        if (opt.typ_select && !opt.typ_select(tcode, path)) {
+            continue
+        }
 
         if (opt.map_carry) {
             carry = cb(null, k, i-ignored_prop, tcode, v, path, control)
             map_dst[ki] = carry
-            if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
+            var ccode
+            if (
+                ( tcode === TCODE.ARR || tcode === TCODE.OBJ ) &&
+                ( carry === v ||  (ccode = typecode(carry)) && (ccode === tcode || ccode === TCODE.OBJ) )
+            ) {
                 walk_container(v, cb, null, opt, path, control, carry)
             }
         } else {
@@ -239,23 +246,23 @@ module.exports = {
     //      typ_select      same as walk option
     //
 
-    mapw: function (c, fn, opt) {
-        opt = opt || {}
-        opt.map = opt.map || ''
-        var in_place = opt && opt.map_in_place
-        return walk(
-            c,
-            function (carry, container, k, i, tcode, v, path, control) {
-                var ki = k === null ? i : k
-
-                if (in_place) {
-                    container[ki] = fn(ki, v, i)
-                }
-            },
-            in_place ? null : Array.isArray(a_or_o) ? [] : {},
-            opt
-        )
-    },
+    // mapw: function (c, fn, opt) {
+    //     opt = opt || {}
+    //     opt.map = opt.map || ''
+    //     var in_place = opt && opt.map_in_place
+    //     return walk(
+    //         c,
+    //         function (carry, container, k, i, tcode, v, path, control) {
+    //             var ki = k === null ? i : k
+    //
+    //             if (in_place) {
+    //                 container[ki] = fn(ki, v, i)
+    //             }
+    //         },
+    //         in_place ? null : Array.isArray(a_or_o) ? [] : {},
+    //         opt
+    //     )
+    // },
     tcode: TCODE,
     walk: walk,
 }
