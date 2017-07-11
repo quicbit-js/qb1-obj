@@ -6,14 +6,15 @@
 //
 //   cb (           (callback function)
 //       carry          - init value passed along - fn(fn(fn(init, ..), ...), ...)
+//       container      - the container holding this value, or null, if at root (first call)
 //       key,           - if within object, it is a string, if within array it is null
 //       i,             - if within array, it is the array index, if within object it is the
 //                        count of the key/value pair (insertion order)
 //       type_code,     - { 0: err, 1: obj, 2: arr, 3, str, 5: num, 6: boo, 7: nul }.  module exported as 'tcode'.
 //       value,         - the object or array value
 //       path,          - an array holding keys/indexes of the current path (values are changed-in-place.  make a copy to preserve values)
-//       control        - an object that controls the iteration.  setting the 'control.walk' property to:
-//
+//       control        - an object that controls iteration and replacement
+//           walk
 //                      'continue': continues the walk over all values (this is the default)
 //                      'stop': stops the walk (returning the value that this function returns)
 //                      'skip': continues the walk, but skip this value's children.  makes sense only for objects and arrays.
@@ -24,9 +25,13 @@
 //
 //   options        (object - optional)
 //
-//      typ_select:     inclusive list of types to include in the walk (callback): [ obj, arr, str, int, num, boo, nul ]
+//      map_carry       if truthy, then replace values with values returned from the callback.  Return
+//                      same arrays/objects from the cb to achieve a map-in-place, or return new arrays/objects
+//                      to do deep copy.
 //
-//      key_select:     function (key, path)
+//      typ_select      - inclusive list of types to include in the walk (callback): [ obj, arr, str, int, num, boo, nul ]
+//
+//      key_select      - function (key, path)
 //
 //                      if set, this function is called for each key prior to calling the callback.
 //                      The function should return true to include the value for this key, false to skip.
@@ -35,7 +40,6 @@
 //
 function walk (v, cb, init, opt) {
     opt = opt || {}
-    var control = { walk: 'continue' }
 
     // callback with root
     var tcode = typecode(v)
@@ -43,15 +47,21 @@ function walk (v, cb, init, opt) {
         tcode = TCODE.ERR
         v = { msg: 'illegal value (function)', val: v }
     }
-    var carry = cb(init, null, 0, tcode, v, [], control)
+    var path = []
+    var control = { walk: 'continue' }
+    var carry = (opt.typ_select && !opt.typ_select(tcode, path))
+        ? init
+        : cb(init, null, 0, tcode, v, [], control)
+
     if (control.walk !== 'continue') {
         return carry
     }
 
+    var ncarry = carry
     if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
-        carry = walk_container(tcode === TCODE.OBJ, v, cb, carry, opt, [], control)
+        ncarry = walk_container(v, cb, carry, opt, [], control)
     }
-    return carry
+    return opt.map_carry ? carry : ncarry
 }
 
 var TCODE = {
@@ -83,11 +93,14 @@ function typecode (v) {
     }
 }
 
+// if opt.map_carry, then carry is the target container (array or object)
 var STOP_OBJ = {carry: null }
-function walk_container (in_object, container, cb, carry, opt, path, control) {
+function walk_container (container, cb, carry, opt, path, control) {
+    var in_object = !Array.isArray(container)
     var keys_or_vals = in_object ? Object.keys(container) : container
     var depth = path.length
-    var ignored = 0
+    var ignored_prop = 0
+    var ncarry = carry
     for (var i = 0; i < keys_or_vals.length; i++) {
         var k   // the object key, if in object
         var ki  // the key or index actually used (array index or object key)
@@ -106,7 +119,7 @@ function walk_container (in_object, container, cb, carry, opt, path, control) {
         var tcode = typecode(v)
         if (tcode === TCODE_FUN) {
             if (in_object) {
-                ignored++
+                ignored_prop++
                 continue
             } else {
                 tcode = TCODE.ERR
@@ -114,22 +127,30 @@ function walk_container (in_object, container, cb, carry, opt, path, control) {
             }
         }
 
-        carry = cb(carry, k, i-ignored, tcode, v, path, control)
+        if (opt.map_carry) {
+            ncarry = cb(carry, k, i-ignored_prop, tcode, v, path, control)
+            carry[ki] = ncarry
+        } else {
+            ncarry = cb(ncarry, k, i-ignored_prop, tcode, v, path, control)
+        }
         switch (control.walk) {
             case 'continue':
                 // walk children
                 if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
-                    carry = walk_container(tcode === TCODE.OBJ, v, cb, carry, opt, path, control)
-                    if (carry === STOP_OBJ) {
+                    var wcarry = walk_container(v, cb, ncarry, opt, path, control)
+                    if (wcarry === STOP_OBJ) {
                         return depth === 0 ? STOP_OBJ.carry : STOP_OBJ          // unwrap carry when leaving (depth = 1)
+                    }
+                    if (!opt.map_carry) {
+                        ncarry = wcarry
                     }
                 }
                 break
             case 'stop':
                 if (depth === 0) {
-                    return carry
+                    return ncarry
                 } else {
-                    STOP_OBJ.carry = carry
+                    STOP_OBJ.carry = ncarry
                     return STOP_OBJ
                 }
             case 'skip':
@@ -141,7 +162,7 @@ function walk_container (in_object, container, cb, carry, opt, path, control) {
     if (path.length > depth) {
         path.length = depth
     }
-    return carry
+    return ncarry
 }
 
 module.exports = {
@@ -170,16 +191,11 @@ module.exports = {
     oo_get: function (o, k1, k2) {
         return o[k1] && o[k1][k2]
     },
-    // return a new object with the same keys, but new values
-    map: function (o, fn) {
-        var ret = {}
-        var keys = Object.keys(o)
-        for (var i=0; i<keys.length; i++) {
-            ret[keys[i]] = fn(keys[i], o[keys[i]], i)
-        }
-        return ret
-    },
-    // return a new object with same values, but new key names (in same insertion order)
+    // return a new object with same own-values, but new key names (in same insertion order)
+    // fn
+    //      k       the property key
+    //      v       the property value
+    //      i       the index of the property value
     mapk: function (o, fn) {
         var ret = {}
         var keys = Object.keys(o)
@@ -188,6 +204,54 @@ module.exports = {
             ret[fn(keys[i], v, i)] = v
         }
         return ret
+    },
+    // return a new object with the same keys, but new values
+    // fn
+    //      k       the property key
+    //      v       the property value
+    //      i       the index of the property value
+    map: function (o, fn) {
+        var ret = {}
+        var keys = Object.keys(o)
+        for (var i=0; i<keys.length; i++) {
+            ret[keys[i]] = fn(keys[i], o[keys[i]], i)
+        }
+        return ret
+    },
+
+    // A walk-based map function performing nested traversal and replacement.
+    // By default, creates new objects.  Use opt.map_in_place to modify the
+    // given object in-place.
+    //
+    // c            the container (array or object) to map
+    //
+    // fn
+    //      ki      array index (number) or object string (key)
+    //      v       the property value
+    //      i       the index of the property value (same as i for arrays)
+    //
+    // opt
+    //      map             set to 'in-place' to modify all containers in place, or 'copy' to return new objects/arrays (the default)
+    //      key_select      same as walk option
+    //      typ_select      same as walk option
+    //
+
+    mapw: function (c, fn, opt) {
+        opt = opt || {}
+        opt.map = opt.map || ''
+        var in_place = opt && opt.map_in_place
+        return walk(
+            c,
+            function (carry, container, k, i, tcode, v, path, control) {
+                var ki = k === null ? i : k
+
+                if (in_place) {
+                    container[ki] = fn(ki, v, i)
+                }
+            },
+            in_place ? null : Array.isArray(a_or_o) ? [] : {},
+            opt
+        )
     },
     tcode: TCODE,
     walk: walk,
