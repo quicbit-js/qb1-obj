@@ -27,9 +27,9 @@ var assign = require('qb-assign')
 //
 //   options        (object - optional)
 //
-//      map_carry       if truthy, then replace values with values returned from the callback.  Return
-//                      same arrays/objects from the cb to achieve a map-in-place, or return new arrays/objects
-//                      to do deep copy.
+//      map_mode        string - enables replacement of values or construction of a new object hierarchy
+//                      'keys'   use the returned fn values to modify keys in objects rather than values (only objects are changed)
+//                      'vals'   (default) use the returned fn values to construct new arrays and objects (deep copy)
 //
 //      typ_select      - inclusive list of types to include in the walk (callback): [ obj, arr, str, int, num, boo, nul ]
 //
@@ -50,8 +50,14 @@ function walk (v, cb, init, opt) {
     var ret = init
     var control = { walk: 'continue' }
     var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
+    // after implementing map_mode along side other walk functionality, i'm not a big fan... but need to
+    // move on to other work for now.  We may want to bring together vals callback (that creates
+    // objects/arrays) and the keys object creation... or separate into different functions... or something better.
+    // the interface should support more consistent filtering as well to limit structures returned.
+    // perhaps put object/array creation in a simple strategy function that is called for containers to create or
+    // re-use arrays.
     if (opt.map_mode === 'keys') {
-    is_container || err('expected array or object')
+        is_container || err('expected array or object')
         ret = tcode === TCODE.OBJ ? {} : []
         walk_container(v, cb, null, opt, path, control, ret)
     } else if (opt.map_mode === 'vals') {
