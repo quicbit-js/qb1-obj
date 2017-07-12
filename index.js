@@ -51,7 +51,7 @@ function walk (v, cb, init, opt) {
     var control = { walk: 'continue' }
     var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
     if (opt.map_mode === 'keys') {
-        is_container || err('expected array or object')
+    is_container || err('expected array or object')
         ret = tcode === TCODE.OBJ ? {} : []
         walk_container(v, cb, null, opt, path, control, ret)
     } else if (opt.map_mode === 'vals') {
