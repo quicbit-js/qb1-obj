@@ -204,18 +204,12 @@ test('length', function (t) {
 
 test('map', function (t) {
     t.table_assert([
-        [ 'o',                      'fn',                                   'exp' ],
-        [ {},                       null,                                   {} ],
-        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},         {1:3,2:15,3:41} ],
+        [ 'o',                      'fn',                             'opt',            'exp' ],
+        [ {},                       null,                             {keys:false},     {} ],
+        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},   {keys:false},     {1:3,2:15,3:41} ],
+        [ {},                       null,                             {keys:true},      {} ],
+        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},   {keys:true},      {3:3,15:7,41:13} ],
     ], obj.map)
-})
-
-test('mapk', function (t) {
-    t.table_assert([
-        [ 'o',                      'fn',                                   'exp' ],
-        [ {},                       null,                                   {} ],
-        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},         {3:3,15:7,41:13} ],
-    ], obj.mapk)
 })
 
 test('mapw', function (t) {

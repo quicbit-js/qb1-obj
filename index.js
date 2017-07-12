@@ -222,30 +222,24 @@ module.exports = {
     oo_get: function (o, k1, k2) {
         return o[k1] && o[k1][k2]
     },
-    // return a new object with same own-values, but new key names (in same insertion order)
+    // return a new object with either keys or values returned by the given fn() (see opt.keys).
+    // This is a shallow traversal.   For nested traversal, see mapw().
     // fn
     //      k       the property key
     //      v       the property value
     //      i       the index of the property value
-    mapk: function (o, fn) {
+    // opt
+    //      keys    if truthy, the returned object will have the keys returned from fn() instead of the values
+    //
+    map: function (o, fn, opt) {
         var ret = {}
         var keys = Object.keys(o)
-        for (var i=0; i<keys.length; i++) {
-            var v = o[keys[i]]
-            ret[fn(keys[i], v, i)] = v
-        }
-        return ret
-    },
-    // return a new object with the same keys, but new values
-    // fn
-    //      k       the property key
-    //      v       the property value
-    //      i       the index of the property value
-    map: function (o, fn) {
-        var ret = {}
-        var keys = Object.keys(o)
-        for (var i=0; i<keys.length; i++) {
-            ret[keys[i]] = fn(keys[i], o[keys[i]], i)
+        var len = keys.length
+        var i
+        if (opt && opt.keys) {
+            for (i=0; i<len; i++) { var v = o[keys[i]]; ret[fn(keys[i], v, i)] = v }
+        } else {
+            for (i=0; i<len; i++) { ret[keys[i]] = fn(keys[i], o[keys[i]], i) }
         }
         return ret
     },
