@@ -60,7 +60,7 @@ function walk (v, cb, init, opt) {
     }
 
     if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
-        if (opt.map_carry) {
+        if (opt.map_mode) {
             walk_container(v, cb, null, opt, [], control, carry)
         } else {
             carry = walk_container(v, cb, carry, opt, [], control)
@@ -134,22 +134,30 @@ function walk_container (container, cb, carry, opt, path, control, map_dst) {
             continue
         }
 
-        if (opt.map_carry) {
-            carry = cb(null, k, i-ignored_prop, tcode, v, path, control)
-            map_dst[ki] = carry
+        var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
+        if (opt.map_mode === 'keys') {
+            // return is the new key
+            var newk = cb(null, k, i-ignored_prop, tcode, v, path, control)
+            if (is_container) {
+                map_dst[newk] = tcode === TCODE.OBJ ? {} : []
+                walk_container(v, cb, null, opt, path, control, map_dst[newk])
+            } else {
+                map_dst[newk] = v
+            }
+        } else if (opt.map_mode === 'vals') {
+            var newv = cb(null, k, i-ignored_prop, tcode, v, path, control)
+            map_dst[ki] = newv
             var ccode
-            if (
-                ( tcode === TCODE.ARR || tcode === TCODE.OBJ ) &&
-                ( carry === v ||  (ccode = typecode(carry)) && (ccode === tcode || ccode === TCODE.OBJ) )
-            ) {
-                walk_container(v, cb, null, opt, path, control, carry)
+            if (is_container && (newv === v || ((ccode = typecode(newv)) && (ccode === tcode || ccode === TCODE.OBJ))) ) {
+                walk_container(v, cb, null, opt, path, control, newv)
             }
         } else {
+            // carry/reduce (not map-mode)
             carry = cb(carry, k, i-ignored_prop, tcode, v, path, control)
             switch (control.walk) {
                 case 'continue':
                     // walk children
-                    if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
+                    if (is_container) {
                         carry = walk_container(v, cb, carry, opt, path, control)
                         if (carry === STOP_OBJ) {
                             return depth === 0 ? STOP_OBJ.carry : STOP_OBJ          // unwrap carry when leaving (depth = 1)
@@ -177,7 +185,7 @@ function walk_container (container, cb, carry, opt, path, control, map_dst) {
     return carry
 }
 
-function map_in_situ_cb(fn) {
+function map_in_situ_cb (fn) {
     return function (carry, k, i, tcode, v, path) {
         switch (tcode) {
             case TCODE.ARR: case TCODE.OBJ: return v
@@ -186,7 +194,7 @@ function map_in_situ_cb(fn) {
     }
 }
 
-function map_copy_cb(fn) {
+function map_copy_cb (fn) {
     return function (carry, k, i, tcode, v, path) {
         switch (tcode) {
             case TCODE.ARR: return []
@@ -223,21 +231,23 @@ module.exports = {
         return o[k1] && o[k1][k2]
     },
     // return a new object with either keys or values returned by the given fn() (see opt.keys).
-    // This is a shallow traversal.   For nested traversal, see mapw().
+    // This is a simple shallow traversal.   For nested traversal, see mapw().
     // fn
     //      k       the property key
     //      v       the property value
     //      i       the index of the property value
     // opt
-    //      keys    if truthy, the returned object will have the keys returned from fn() instead of the values
+    //      map_mode    str
+    //                      'keys' the returned object will use the keys returned from fn()
+    //                      'vals' (default) the returned object will consist of values returned from fn()
     //
     map: function (o, fn, opt) {
         var ret = {}
         var keys = Object.keys(o)
         var len = keys.length
         var i
-        if (opt && opt.keys) {
-            for (i=0; i<len; i++) { var v = o[keys[i]]; ret[fn(keys[i], v, i)] = v }
+        if (opt && opt.map_mode === 'keys') {
+            for (i=0; i<len; i++) { ret[fn(keys[i], o[keys[i]], i)] = o[keys[i]] }
         } else {
             for (i=0; i<len; i++) { ret[keys[i]] = fn(keys[i], o[keys[i]], i) }
         }
@@ -257,20 +267,25 @@ module.exports = {
     //      path    [str|int]    - the current location path (array - see walk function)
     //
     // opt
-    //      in_situ         set to true to modify objects and arrays in place, false (the default) to create a new set of objects
+    //      map_mode        str
+    //                          'keys'   use the returned fn values to modify keys in objects rather than values (only objects are changed)
+    //                          'vals'   (default) use the returned fn values to construct new arrays and objects (deep copy)
+    //                          'vals-in-situ' use the returned fn values to modify objects and arrays in-place.
+    //
     //      key_select      same as walk option
     //      typ_select      same as walk option
     //
 
     mapw: function (c, fn, opt) {
         opt = assign({}, opt)
-        opt.map_carry = true
+        var in_situ = opt.map_mode === 'vals-in-situ'
+        opt.map_mode = opt.map_mode === 'keys' ? 'keys' : 'vals'    // walk has just two map modes: 'keys' and 'vals'
         var cb
         var init = null
-        if (opt.in_situ) {
+        if (in_situ) {
             cb = map_in_situ_cb(fn)
-            init = Array.isArray(c) ? [] : {}
         } else {
+            init = Array.isArray(c) ? [] : {}
             cb = map_copy_cb(fn)
         }
         return walk(c, cb, init, opt)
