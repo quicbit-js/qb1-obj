@@ -45,28 +45,31 @@ function walk (v, cb, init, opt) {
 
     // callback with root
     var tcode = typecode(v)
-    if (tcode === TCODE_FUN) {
-        tcode = TCODE.ERR
-        v = { msg: 'illegal value (function)', val: v }
-    }
+    tcode !== TCODE_FUN || err('illegal value (function)')
     var path = []
+    var ret = init
     var control = { walk: 'continue' }
-    var carry = (opt.typ_select && !opt.typ_select(tcode, path))
-        ? init
-        : cb(init, null, 0, tcode, v, [], control)
-
-    if (control.walk !== 'continue') {
-        return carry
-    }
-
-    if (tcode === TCODE.ARR || tcode === TCODE.OBJ) {
-        if (opt.map_mode) {
-            walk_container(v, cb, null, opt, [], control, carry)
-        } else {
-            carry = walk_container(v, cb, carry, opt, [], control)
+    var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
+    if (opt.map_mode === 'keys') {
+        is_container || err('expected array or object')
+        ret = tcode === TCODE.OBJ ? {} : []
+        walk_container(v, cb, null, opt, path, control, ret)
+    } else if (opt.map_mode === 'vals') {
+        is_container || err('expected array or object')
+        ret = cb(init, null, 0, tcode, v, [], control)
+        var ccode
+        if (ret === v || ((ccode = typecode(ret)) && (ccode === tcode || ccode === TCODE.OBJ)) ) {
+            walk_container(v, cb, null, opt, path, control, ret)
+        }
+    } else {
+        if (!opt.typ_select || opt.typ_select(tcode, path)) {
+            ret = cb(init, null, 0, tcode, v, [], control)
+        }
+        if (control.walk === 'continue') {
+            ret = walk_container(v, cb, ret, opt, path, control)
         }
     }
-    return carry
+    return ret
 }
 
 var TCODE = {
@@ -97,6 +100,8 @@ function typecode (v) {
             return v === null ? TCODE.NUL : (Array.isArray(v) ? TCODE.ARR : TCODE.OBJ)
     }
 }
+
+function err (msg) { throw Error(msg) }
 
 // map_dst, if set, will be populated with results from cb()
 var STOP_OBJ = {carry: null }
@@ -136,8 +141,7 @@ function walk_container (container, cb, carry, opt, path, control, map_dst) {
 
         var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
         if (opt.map_mode === 'keys') {
-            // return is the new key
-            var newk = cb(null, k, i-ignored_prop, tcode, v, path, control)
+            var newk = in_object ? cb(null, k, i-ignored_prop, tcode, v, path, control) : i
             if (is_container) {
                 map_dst[newk] = tcode === TCODE.OBJ ? {} : []
                 walk_container(v, cb, null, opt, path, control, map_dst[newk])
@@ -185,7 +189,7 @@ function walk_container (container, cb, carry, opt, path, control, map_dst) {
     return carry
 }
 
-function map_in_situ_cb (fn) {
+function map_vals_in_situ_cb (fn) {
     return function (carry, k, i, tcode, v, path) {
         switch (tcode) {
             case TCODE.ARR: case TCODE.OBJ: return v
@@ -194,13 +198,19 @@ function map_in_situ_cb (fn) {
     }
 }
 
-function map_copy_cb (fn) {
+function map_vals_cb (fn) {
     return function (carry, k, i, tcode, v, path) {
         switch (tcode) {
             case TCODE.ARR: return []
             case TCODE.OBJ: return {}
             default:        return fn(k == null ? i : k, v, i, path)
         }
+    }
+}
+
+function map_key_cb (fn) {
+    return function (carry, k, i, tcode, v, path) {
+        return fn(k, v, i, path)
     }
 }
 
@@ -283,10 +293,10 @@ module.exports = {
         var cb
         var init = null
         if (in_situ) {
-            cb = map_in_situ_cb(fn)
+            cb = map_vals_in_situ_cb(fn)
         } else {
             init = Array.isArray(c) ? [] : {}
-            cb = map_copy_cb(fn)
+            cb = opt.map_mode === 'keys' ? map_key_cb(fn) : map_vals_cb(fn)
         }
         return walk(c, cb, init, opt)
     },

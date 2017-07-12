@@ -74,14 +74,14 @@ test('walk - key_select', function (t) {
 test('walk - typ_select', function (t) {
     function ts(whichcode, depth) {
         return function (tcode, path) {
-            return path.length !== depth || whichcode === tcode
+            return path.length !== depth || whichcode === tcode // apply filter at the given depth only
         }
     }
     t.table_assert([
         [ 'o',                              'init',     'opt',                          'exp' ],
         [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,-1)}, [ 'first', 'R:{0}' ] ], // filter not applied
         [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,0)},  [ 'first' ] ],
-        [ {a:1},                            ['first'],  {typ_select: ts(TCODE.NUM,0)},  [ 'first','a.0:1' ] ],
+        [ {a:1},                            ['first'],  {typ_select: ts(TCODE.NUM,1)},  [ 'first', 'R:{1}', 'a.0:1' ] ],
         [ {a:[1,2,3], b:true, d:null, e:7}, [],         {typ_select: ts(TCODE.NUM,1)},  [ 'R:{4}', 'e.3:7' ] ],
         [ {a:[1,'b',3], b:true, d:null, e:7}, [],       {typ_select: ts(TCODE.NUM,2)},  [ 'R:{4}', 'a.0:[3]', 'a/0:1', 'a/2:3', 'b.1:T', 'd.2:N', 'e.3:7' ] ],
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
@@ -91,9 +91,18 @@ test('walk errors', function (t) {
     var fn = function chewy () {}
     t.table_assert([
         [ 'o',                              'init',   'opt',   'exp' ],
-        [ fn,                               [],       null,    [ 'R:Error(illegal value (function):function chewy() {})' ] ],
         [ [7,fn,9],                         [],       null,    [ 'R:[3]', '0:7', '1:Error(unexpected function.  functions are only allowed as object properties:function chewy() {})', '2:9' ] ],
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), [], opt)} )
+})
+
+test('walk exception', function (t) {
+    var fn = function chewy () {}
+    t.table_assert([
+        [ 'o',                              'init',   'opt',   'exp' ],
+        [ fn,                               [],       null,    /illegal value/ ],
+        [ 5,                                [],       {map_mode:'keys'},    /expected array or object/ ],
+        [ 5,                                [],       {map_mode:'vals'},    /expected array or object/ ],
+    ], function (o, init, opt) { obj.walk(o, path_and_val(), [], opt)}, {assert:'throws'} )
 })
 
 test('walk control', function (t) {
@@ -213,13 +222,20 @@ test('map', function (t) {
 })
 
 test('mapw', function (t) {
-    var kvi = function(k,v,i) {return k*v+i}
+    var ki = function(k,v,i) {
+        return k + i
+    }
     var vi3 = function(k,v,i) {return v*(i+3)}
     t.table_assert([
         [ 'o',                          'fn',   'opt',                      'exp' ],
         [ {},                           null,   null,                       [false, {}] ],
-        [ {1:3,2:7,3:13},               kvi,    {map_mode:'vals-in-situ'},  [true,{1:3,2:15,3:41}] ],
-        [ {1:3,2:7,3:13},               kvi,    {map_mode:'vals'},          [false,{1:3,2:15,3:41}] ],
+        [ {a:1,b:2},                    ki,     {map_mode:'keys'},          [false, {a0:1,b1:2}] ],
+        [ {a:1,b:{x:7,y:8},c:2},        ki,     {map_mode:'keys'},          [false, {a0:1,b1:{x0:7,y1:8},c2:2 } ] ],
+        [ {a:1,b:[7,8],c:2},            ki,     {map_mode:'keys'},          [false, {a0:1,b1:[7,8],c2:2 } ] ],
+        [ [1,[7,{a:8}],2],              ki,     {map_mode:'keys'},          [false, [1,[7,{a0:8}],2] ] ],
+        [ {a:1,b:2},                    vi3,    {map_mode:'vals'},          [false, {a:3,b:8}] ],
+        [ {a:1,b:{x:7,y:8},c:2},        vi3,    {map_mode:'vals'},          [false, { a: 3, b: { x: 21, y: 32 }, c: 10 }] ],
+        [ {a:1,b:{x:7,y:8},c:2},        vi3,    {map_mode:'vals-in-situ'},  [true, { a: 3, b: { x: 21, y: 32 }, c: 10 }] ],
         [ {a:3,b:7,c:[5,9]},            vi3,    {map_mode:'vals'},          [false,{a:9,b:28,c:[15,36]}] ],
         [ {a:3,b:7,c:[{d:[1,3,5]},9]},  vi3,    {map_mode:'vals'},          [false,{a:9,b:28,c:[{d:[3,12,25]},36]}] ],
         [ [3,7,[{d:[1,3,5]},9]],        vi3,    {map_mode:'vals'},          [false,[9,28,[{d:[3,12,25]},36]]] ],
