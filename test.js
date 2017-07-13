@@ -3,7 +3,7 @@ var obj = require('.')
 var TCODE = obj.tcode
 
 function err (msg) { throw Error(msg) }
-function path_and_val (control_fn) {
+function path_and_val (control_fn, with_i) {
     return function (carry, k, i, tcode, v, path, control) {
         var vstr
         switch (tcode) {
@@ -15,6 +15,7 @@ function path_and_val (control_fn) {
             case TCODE.STR:
                 vstr = String(v); break
             case TCODE.NUL: vstr = 'N'; break
+            case TCODE.FUN: vstr = 'F'; break
             default:
                 throw Error('unexpected type code: ' + tcode)
         }
@@ -24,7 +25,9 @@ function path_and_val (control_fn) {
             last === i || err('path does not match index: ' + i + ' and ' + pstr)
         } else {
             last === k || err('path does not match key: ' + k + ' and ' + pstr)
-            pstr += '.' + i     // add index
+            if (with_i) {
+                pstr += '.' + i     // add index
+            }
         }
         carry.push(pstr + ':' + vstr)
         if (control_fn) {
@@ -47,12 +50,12 @@ test('walk', function (t) {
         [ {a:{x:1,y:2}},                    [],         null,     [ 'R:{1}', 'a.0:{2}', 'a/x.0:1', 'a/y.1:2' ] ],
         [ {a:{x:1,y:2}, b:{z:3}},           [],         null,     [ 'R:{2}', 'a.0:{2}', 'a/x.0:1', 'a/y.1:2', 'b.1:{1}', 'b/z.0:3' ] ],
         [ {a:{x:1,y:2},b:[7,8,9]},          [],         null,     [ 'R:{2}', 'a.0:{2}', 'a/x.0:1', 'a/y.1:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],
-        [ {a:{x:fn,y:2},b:[7,8,9]},         [],         null,     [ 'R:{2}', 'a.0:{2}', 'a/y.0:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],  // ignore object functions
+        [ {a:{x:fn,y:2},b:[7,8,9]},         [],         null,     [ 'R:{2}', 'a.0:{2}', 'a/x.0:F', 'a/y.1:2', 'b.1:[3]', 'b/0:7', 'b/1:8', 'b/2:9' ] ],
         [ [],                               [],         null,     [ 'R:[0]' ] ],
         [ [[[]]],                           [],         null,     [ 'R:[1]', '0:[1]', '0/0:[0]' ] ],
         [ [[{}]],                           [],         null,     [ 'R:[1]', '0:[1]', '0/0:{0}' ] ],
         [ [7,8,9],                          [],         null,     [ 'R:[3]', '0:7', '1:8', '2:9' ] ],
-    ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
+    ], function (o, init, opt) { return obj.walk(o, path_and_val(null, true), init, opt)} )
 })
 
 test('walk - key_select', function (t) {
@@ -64,10 +67,10 @@ test('walk - key_select', function (t) {
     t.table_assert([
         [ 'o',                              'init',     'opt',                       'exp' ],
         [ {},                               ['first'],  {key_select: ks(/a/,0)},     [ 'first', 'R:{0}' ] ],  // filter not applied (no keys at depth 0)
-        [ {a:1},                            ['first'],  {key_select: ks(/a/,0)},     [ 'first', 'R:{1}', 'a.0:1' ] ],
-        [ {a:1, b:'foo', c:true, d:null},   [],         {key_select: ks(/b/,1)},     [ 'R:{4}', 'b.1:foo' ] ],
-        [ {a:{x:1,y:2}},                    [],         {key_select: ks(/x/,2)},     [ 'R:{1}', 'a.0:{2}', 'a/x.0:1' ] ],
-        [ {a:{x:1,y:2}},                    [],         {key_select: ks(/y/,2)},     [ 'R:{1}', 'a.0:{2}', 'a/y.1:2' ] ],
+        [ {a:1},                            ['first'],  {key_select: ks(/a/,0)},     [ 'first', 'R:{1}', 'a:1' ] ],
+        [ {a:1, b:'foo', c:true, d:null},   [],         {key_select: ks(/b/,1)},     [ 'R:{4}', 'b:foo' ] ],
+        [ {a:{x:1,y:2}},                    [],         {key_select: ks(/x/,2)},     [ 'R:{1}', 'a:{2}', 'a/x:1' ] ],
+        [ {a:{x:1,y:2}},                    [],         {key_select: ks(/y/,2)},     [ 'R:{1}', 'a:{2}', 'a/y:2' ] ],
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
 })
 
@@ -81,28 +84,10 @@ test('walk - typ_select', function (t) {
         [ 'o',                              'init',     'opt',                          'exp' ],
         [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,-1)}, [ 'first', 'R:{0}' ] ], // filter not applied
         [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,0)},  [ 'first' ] ],
-        [ {a:1},                            ['first'],  {typ_select: ts(TCODE.NUM,1)},  [ 'first', 'R:{1}', 'a.0:1' ] ],
-        [ {a:[1,2,3], b:true, d:null, e:7}, [],         {typ_select: ts(TCODE.NUM,1)},  [ 'R:{4}', 'e.3:7' ] ],
-        [ {a:[1,'b',3], b:true, d:null, e:7}, [],       {typ_select: ts(TCODE.NUM,2)},  [ 'R:{4}', 'a.0:[3]', 'a/0:1', 'a/2:3', 'b.1:T', 'd.2:N', 'e.3:7' ] ],
+        [ {a:1},                            ['first'],  {typ_select: ts(TCODE.NUM,1)},  [ 'first', 'R:{1}', 'a:1' ] ],
+        [ {a:[1,2,3], b:true, d:null, e:7}, [],         {typ_select: ts(TCODE.NUM,1)},  [ 'R:{4}', 'e:7' ] ],
+        [ {a:[1,'b',3], b:true, d:null, e:7}, [],       {typ_select: ts(TCODE.NUM,2)},  [ 'R:{4}', 'a:[3]', 'a/0:1', 'a/2:3', 'b:T', 'd:N', 'e:7' ] ],
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
-})
-
-test('walk errors', function (t) {
-    var fn = function chewy () {}
-    t.table_assert([
-        [ 'o',                              'init',   'opt',   'exp' ],
-        [ [7,fn,9],                         [],       null,    [ 'R:[3]', '0:7', '1:Error(unexpected function.  functions are only allowed as object properties:function chewy() {})', '2:9' ] ],
-    ], function (o, init, opt) { return obj.walk(o, path_and_val(), [], opt)} )
-})
-
-test('walk exception', function (t) {
-    var fn = function chewy () {}
-    t.table_assert([
-        [ 'o',                              'init',   'opt',   'exp' ],
-        [ fn,                               [],       null,    /illegal value/ ],
-        [ 5,                                [],       {map_mode:'keys'},    /expected array or object/ ],
-        [ 5,                                [],       {map_mode:'vals'},    /expected array or object/ ],
-    ], function (o, init, opt) { obj.walk(o, path_and_val(), [], opt)}, {assert:'throws'} )
 })
 
 test('walk control', function (t) {
@@ -116,15 +101,30 @@ test('walk control', function (t) {
 
     t.table_assert([
         [ 'o',                          'cb',                  'init',   'opt',   'exp' ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(0, 'skip'),   [],       null,    [ 'R:{2}' ] ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(1, 'skip'),   [],       null,    [ 'R:{2}', 'a.0:{1}', 'x.1:[1]' ] ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(2, 'skip'),   [],       null,    [ 'R:{2}', 'a.0:{1}', 'a/b.0:[1]', 'x.1:[1]', 'x/0:7' ] ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(3, 'skip'),   [],       null,    [ 'R:{2}', 'a.0:{1}', 'a/b.0:[1]', 'a/b/0:{1}', 'x.1:[1]', 'x/0:7'  ] ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(0, 'stop'),   [],       null,    [ 'R:{2}' ] ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(1, 'stop'),   [],       null,    [ 'R:{2}', 'a.0:{1}' ] ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(2, 'stop'),   [],       null,    [ 'R:{2}', 'a.0:{1}', 'a/b.0:[1]'  ] ],
-        [ {a:{b:[{c:'hi'}]},x:[7]},      maxdepth(3, 'stop'),   [],       null,    [ 'R:{2}', 'a.0:{1}', 'a/b.0:[1]', 'a/b/0:{1}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(5, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(4, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(3, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(2, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'x:[1]', 'x/0:8' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(1, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(0, 'skip'),   [],       null,    [ 'R:{2}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(5, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(4, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(3, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(2, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(1, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(0, 'stop'),   [],       null,    [ 'R:{2}' ] ],
     ], obj.walk )
+})
+
+
+/*
+test('walk exception', function (t) {
+    var fn = function chewy () {}
+    t.table_assert([
+        [ 'o',                              'init',   'opt',   'exp' ],
+        [ 5,                                [],       {map_mode:'keys'},    /expected array or object/ ],
+        [ 5,                                [],       {map_mode:'vals'},    /expected array or object/ ],
+    ], function (o, init, opt) { obj.walk(o, path_and_val(), [], opt)}, {assert:'throws'} )
 })
 
 test('walk - map_carry in-place', function (t) {
@@ -202,15 +202,6 @@ test('vals', function (t) {
     })
 })
 
-test('length', function (t) {
-    t.table_assert([
-        [ 'o',                          'exp' ],
-        [ {},                           0 ],
-        [ {a:1,b:2},                    2 ],
-        [ [1,2,3],                      3 ],
-    ], obj.len)
-})
-
 test('map', function (t) {
     t.table_assert([
         [ 'o',                      'fn',                             'opt',                'exp' ],
@@ -241,6 +232,16 @@ test('mapw', function (t) {
         [ [3,7,[{d:[1,3,5]},9]],        vi3,    {map_mode:'vals'},          [false,[9,28,[{d:[3,12,25]},36]]] ],
         [ [3,7,[{d:[1,3,5]},9]],        vi3,    {map_mode:'vals-in-situ'},  [true,[9,28,[{d:[3,12,25]},36]]] ],
     ], function(o, fn, opt) { var n = obj.mapw(o, fn, opt); return [n === o, n] })
+})
+*/
+
+test('length', function (t) {
+    t.table_assert([
+        [ 'o',                          'exp' ],
+        [ {},                           0 ],
+        [ {a:1,b:2},                    2 ],
+        [ [1,2,3],                      3 ],
+    ], obj.len)
 })
 
 test('oo_put', function (t) {

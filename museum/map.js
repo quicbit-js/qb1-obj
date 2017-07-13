@@ -43,17 +43,39 @@ var assign = require('qb-assign')
 function walk (v, cb, init, opt) {
     opt = opt || {}
 
+    // callback with root
     var tcode = typecode(v)
+    tcode !== TCODE_FUN || err('illegal value (function)')
     var path = []
-    var carry = init
+    var ret = init
     var control = { walk: 'continue' }
-    if (!opt.typ_select || opt.typ_select(tcode, path)) {
-        carry = cb(init, null, 0, tcode, v, path, control)
+    var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
+    // after implementing map_mode along side other walk functionality, i'm not a big fan... but need to
+    // move on to other work for now.  We may want to bring together vals callback (that creates
+    // objects/arrays) and the keys object creation... or separate into different functions... or something better.
+    // the interface should support more consistent filtering as well to limit structures returned.
+    // perhaps put object/array creation in a simple strategy function that is called for containers to create or
+    // re-use arrays.
+    if (opt.map_mode === 'keys') {
+        is_container || err('expected array or object')
+        ret = tcode === TCODE.OBJ ? {} : []
+        walk_container(v, cb, null, opt, path, control, ret)
+    } else if (opt.map_mode === 'vals') {
+        is_container || err('expected array or object')
+        ret = cb(init, null, 0, tcode, v, [], control)
+        var ccode
+        if (ret === v || ((ccode = typecode(ret)) && (ccode === tcode || ccode === TCODE.OBJ)) ) {
+            walk_container(v, cb, null, opt, path, control, ret)
+        }
+    } else {
+        if (!opt.typ_select || opt.typ_select(tcode, path)) {
+            ret = cb(init, null, 0, tcode, v, [], control)
+        }
+        if (control.walk === 'continue') {
+            ret = walk_container(v, cb, ret, opt, path, control)
+        }
     }
-    if (control.walk === 'continue') {
-        carry = walk_container(v, cb, carry, opt, path, control)
-    }
-    return carry
+    return ret
 }
 
 var TCODE = {
@@ -64,8 +86,8 @@ var TCODE = {
     NUM: 4,
     BOO: 5,
     NUL: 6,
-    FUN: 7,
 }
+var TCODE_FUN = 7       // not public - never passed to callback
 
 function typecode (v) {
     switch (typeof v) {
@@ -78,46 +100,92 @@ function typecode (v) {
         case 'undefined':
             return TCODE.NUL
         case 'function':
-            return TCODE.FUN
+            return TCODE_FUN
         default:
             // default case handles 'object' including host objects that may occur in certain environments
             return v === null ? TCODE.NUL : (Array.isArray(v) ? TCODE.ARR : TCODE.OBJ)
     }
 }
 
-// map_dst, if set, will be populated with results from cb()
-function walk_container (container, cb, carry, opt, path, control) {
-    if (control.walk === 'stop') { return carry }
+function err (msg) { throw Error(msg) }
 
+// map_dst, if set, will be populated with results from cb()
+var STOP_OBJ = {carry: null }
+function walk_container (container, cb, carry, opt, path, control, map_dst) {
     var in_object = !Array.isArray(container)
     var keys_or_vals = in_object ? Object.keys(container) : container
     var depth = path.length
+    var ignored_prop = 0
     for (var i = 0; i < keys_or_vals.length; i++) {
-        var k = in_object ? keys_or_vals[i] : null
-        path[depth] = k || i
+        var k   // the object key, if in object
+        var ki  // the key or index actually used (array index or object key)
+        if (in_object) {
+            k = keys_or_vals[i]
+            ki = k
+        } else {
+            k = null
+            ki = i
+        }
+        path[depth] = ki
         if (in_object && opt.key_select && !opt.key_select(k, path)) {
             continue
         }
-        var v = container[k || i]
+        var v = container[ki]
         var tcode = typecode(v)
+        if (tcode === TCODE_FUN) {
+            if (in_object) {
+                ignored_prop++
+                continue
+            } else {
+                tcode = TCODE.ERR
+                v = { msg: 'unexpected function.  functions are only allowed as object properties', val: v }
+            }
+        }
         if (opt.typ_select && !opt.typ_select(tcode, path)) {
             continue
         }
 
         var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
-        // carry/reduce (not map-mode)
-        carry = cb(carry, k, i, tcode, v, path, control)
-        if (control.walk === 'continue' && is_container) {
-            carry = walk_container(v, cb, carry, opt, path, control)
-            // control may be modifed from this call or above cb()
-        }
-
-        if (control.walk === 'skip') {
-            control.walk = 'continue'
-            break
-        }
-        if (control.walk === 'stop') {
-            return carry
+        if (opt.map_mode === 'keys') {
+            var newk = in_object ? cb(null, k, i-ignored_prop, tcode, v, path, control) : i
+            if (is_container) {
+                map_dst[newk] = tcode === TCODE.OBJ ? {} : []
+                walk_container(v, cb, null, opt, path, control, map_dst[newk])
+            } else {
+                map_dst[newk] = v
+            }
+        } else if (opt.map_mode === 'vals') {
+            var newv = cb(null, k, i-ignored_prop, tcode, v, path, control)
+            map_dst[ki] = newv
+            var ccode
+            if (is_container && (newv === v || ((ccode = typecode(newv)) && (ccode === tcode || ccode === TCODE.OBJ))) ) {
+                walk_container(v, cb, null, opt, path, control, newv)
+            }
+        } else {
+            // carry/reduce (not map-mode)
+            carry = cb(carry, k, i-ignored_prop, tcode, v, path, control)
+            switch (control.walk) {
+                case 'continue':
+                    // walk children
+                    if (is_container) {
+                        carry = walk_container(v, cb, carry, opt, path, control)
+                        if (carry === STOP_OBJ) {
+                            return depth === 0 ? STOP_OBJ.carry : STOP_OBJ          // unwrap carry when leaving (depth = 1)
+                        }
+                    }
+                    break
+                case 'stop':
+                    if (depth === 0) {
+                        return carry
+                    } else {
+                        STOP_OBJ.carry = carry
+                        return STOP_OBJ
+                    }
+                case 'skip':
+                    // children not walked, continue with next peer value
+                    control.walk = 'continue'
+                    break
+            }
         }
     }
 
