@@ -3,22 +3,21 @@ var obj = require('.')
 var TCODE = obj.TCODE
 
 function err (msg) { throw Error(msg) }
+
+function val2str (tcode, v) {
+    switch (tcode) {
+        case TCODE.ARR: return '[' + v.length + ']'
+        case TCODE.OBJ: return '{' + Object.keys(v).length + '}'
+        case TCODE.BOO: return v ? 'T' : 'F'
+        case TCODE.NUM:
+        case TCODE.STR: return String(v)
+        case TCODE.NUL: return 'N'
+        case TCODE.FUN: return 'F'; break
+    }
+}
+
 function path_and_val (control_fn, with_i) {
     return function (carry, k, i, tcode, v, path, pstate, control) {
-        var vstr
-        switch (tcode) {
-            case TCODE.ARR: vstr = '[' + v.length + ']'; break
-            case TCODE.OBJ: vstr = '{' + Object.keys(v).filter(function (k){ return typeof(obj[k] !== 'function')}).length + '}'; break
-            case TCODE.ERR: vstr = 'Error(' + v.msg + ':' + v.val + ')'; break
-            case TCODE.BOO: vstr = v === true ? 'T' : 'F'; break
-            case TCODE.NUM:
-            case TCODE.STR:
-                vstr = String(v); break
-            case TCODE.NUL: vstr = 'N'; break
-            case TCODE.FUN: vstr = 'F'; break
-            default:
-                throw Error('unexpected type code: ' + tcode)
-        }
         var last = path[path.length - 1] || 0
         var pstr = path.join('/') || 'R'        // return 'R' for root
         if (k === null) {
@@ -29,7 +28,7 @@ function path_and_val (control_fn, with_i) {
                 pstr += '.' + i     // add index
             }
         }
-        carry.push(pstr + ':' + vstr)
+        carry.push(pstr + ':' + val2str(tcode, v))
         if (control_fn) {
             control_fn (k, i, tcode, v, path, control)
         }
@@ -116,6 +115,36 @@ test('walk control', function (t) {
     ], obj.walk )
 })
 
+test('keys', function (t) {
+    t.table_assert([
+        [ 'o',                      'exp' ],
+        [ {},                       [] ],
+        [ {a:1,b:2},                ['a','b'] ],
+    ], obj.keys)
+})
+
+test('vals', function (t) {
+    t.table_assert([
+        [ 'o',                      'exp' ],
+        [ {},                       [] ],
+        [ {a:1,b:2,c:null},         [1,2,null] ],
+    ], function (o) {
+        return obj.vals(o)
+    })
+})
+
+test('map', function (t) {
+    var kvi = function(k, i, tcode, v) { return (k||i) + '.' + val2str(tcode, v)}
+    t.table_assert([
+        [ 'o',                          'fn',   'opt',                  'exp' ],
+        [ {},                           null,   null,                   {} ],
+        [ {a:3, b:7, c:13},             kvi,    {map_mode:'vals'},      { a: 'a.3', b: 'b.7', c: 'c.13' } ],
+        [ {a:3, b:[7,8], c:13},         kvi,    {map_mode:'vals'},      { a: 'a.3', b: [ '0.7', '1.8' ], c: 'c.13' } ],
+        [ {},                           null,   {map_mode:'keys'},      {} ],
+        [ {a:3, b:7, c:13},             kvi,    {map_mode:'keys'},      { 'a.3': 3, 'b.7': 7, 'c.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,    {map_mode:'keys'},      { 'a.3': 3, 'b.{1}': { 'z.[2]': [ 7, 8 ] }, 'c.13': 13 } ],
+    ], obj.map)
+})
 
 /*
 test('walk exception', function (t) {
@@ -146,28 +175,6 @@ test('walk - map_carry in-place', function (t) {
     ], function (o, cb, opt) { var n = obj.walk(o, cb, null, opt); return [n === o, n]} )
 })
 
-test('walk - map_carry copy', function (t) {
-    var copy_cb = function (regex, nv) {
-        return function (carry, k, i, tcode, v) {
-            switch (tcode) {
-                case TCODE.ARR:     return []
-                case TCODE.OBJ:     return {}
-                default:            return regex.test(k || String(i)) ? nv : v
-            }
-        }
-    }
-
-    t.table_assert([
-        [ 'o',                          'cb',                   'init', 'opt',           'exp' ],
-        [ {},                           copy_cb(/a/, 3),        {},     {map_mode:'vals'},   [false, {}] ],
-        [ {a:7},                        copy_cb(/a/, 3),        {},     {map_mode:'vals'},   [false, {a:3}] ],
-        [ {a:{b:7}},                    copy_cb(/b/, 3),        {},     {map_mode:'vals'},   [false, {a:{b:3}}] ],
-        [ {a:[7,8,9]},                  copy_cb(/1/, 3),        {},     {map_mode:'vals'},   [false, {a:[7,3,9]}] ],
-        [ [],                           copy_cb(/a/, 3),        {},     {map_mode:'vals'},   [false, []] ],
-        [ [7,8,9],                      copy_cb(/1/, 3),        [],     {map_mode:'vals'},   [false, [7,3,9]] ],
-    ], function (o, cb, init, opt) { var n = obj.walk(o, cb, init, opt); return [n === o, n]} )
-})
-
 test('walk - map_carry - replace containers', function (t) {
     var dreplace = function (depth) {
         return function (carry, k, i, tcode, v, path, control) {
@@ -182,34 +189,6 @@ test('walk - map_carry - replace containers', function (t) {
         [ {a:{x:[7,8,9]},b:8},          dreplace(2),            {},     {map_mode:'vals'},   {a:{x:'i=0'},b:8} ],
         [ {a:{x:[7,8,9]},b:8},          dreplace(3),            {},     {map_mode:'vals'},   {a:{x:['i=0','i=1','i=2' ]},b:8} ],
     ], obj.walk )
-})
-
-test('keys', function (t) {
-    t.table_assert([
-        [ 'o',                      'exp' ],
-        [ {},                       [] ],
-        [ {a:1,b:2},                ['a','b'] ],
-    ], obj.keys)
-})
-
-test('vals', function (t) {
-    t.table_assert([
-        [ 'o',                      'exp' ],
-        [ {},                       [] ],
-        [ {a:1,b:2,c:null},         [1,2,null] ],
-    ], function (o) {
-        return obj.vals(o)
-    })
-})
-
-test('map', function (t) {
-    t.table_assert([
-        [ 'o',                      'fn',                             'opt',                'exp' ],
-        [ {},                       null,                             null,     {} ],
-        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},   {map_mode:'vals'},    {1:3,2:15,3:41} ],
-        [ {},                       null,                             {map_mode:'keys'},    {} ],
-        [ {1:3, 2:7, 3:13},         function(k,v,i) {return k*v+i},   {map_mode:'keys'},    {3:3,15:7,41:13} ],
-    ], obj.map)
 })
 
 test('mapw', function (t) {

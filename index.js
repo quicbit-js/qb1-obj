@@ -1,8 +1,7 @@
 var assign = require('qb-assign')
 
 // walk: iterate over any javascript value (object, array, string, number, null...) and all nested values invoking a
-// callback.  Object function properties are ignored.  Functions in arrays or passed in as the first value are forwarded
-// as an error (tcode = tcode.ERR) to the callback.
+// callback.
 //
 //   o          - the object to walk - which actually can be any value, array, string, number etc.
 //
@@ -39,11 +38,9 @@ var assign = require('qb-assign')
 //
 function walk (v, cb, init, opt) {
     opt = opt || {}
-    opt.dst_fn = opt.dst_fn || function (tcode, v) { return v }
-
     var tcode = typecode(v)
-    var path = []           // does not include root
-    var pstate = []         // includes root
+    var path = []
+    var pstate = []
     var carry = init
     var control = { walk: 'continue' }
     if (!opt.typ_select || opt.typ_select(tcode, path)) {
@@ -56,7 +53,6 @@ function walk (v, cb, init, opt) {
 }
 
 var TCODE = {
-    ERR: 0,
     OBJ: 1,
     ARR: 2,
     STR: 3,
@@ -85,12 +81,9 @@ function typecode (v) {
 }
 
 function walk_container (src, cb, carry, opt, path, pstate, control) {
-    if (control.walk === 'stop') { return carry }
-
     var in_object = !Array.isArray(src)
     var keys_or_vals = in_object ? Object.keys(src) : src
     var depth = path.length
-    pstate[depth + 1] = undefined
     for (var i = 0; i < keys_or_vals.length; i++) {
         var k = in_object ? keys_or_vals[i] : null
         path[depth] = k || i
@@ -122,9 +115,31 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
 
     if (path.length > depth) {
         path.length = depth
-        pstate.length = depth + 1
+        pstate.length = depth
     }
     return carry
+}
+
+function map (o, fn, opt) {
+    var map_keys = opt && opt.map_mode === 'keys'
+    return walk(o, function (carry, k, i, tcode, v, path, pstate) {
+        if (map_keys) {
+            k = k && fn(k, i, tcode, v, path)
+        }
+        var parent = pstate[pstate.length-1]
+        switch (tcode) {
+            case TCODE.ARR: v = []; pstate.push(v); break
+            case TCODE.OBJ: v = {}; pstate.push(v); break
+            default:
+                if (!map_keys) {
+                    v = fn(k, i, tcode, v, path)
+                }
+        }
+        if (parent) {
+            parent[k || i] = v
+        }
+        return pstate[0]
+    }, null, opt)
 }
 
 module.exports = {
@@ -154,5 +169,6 @@ module.exports = {
         return o[k1] && o[k1][k2]
     },
     walk: walk,
+    map: map,
     TCODE: TCODE,
 }
