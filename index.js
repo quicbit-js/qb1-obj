@@ -8,13 +8,14 @@ var assign = require('qb-assign')
 //
 //   cb (           (callback function)
 //       carry          - init value passed along - fn(fn(fn(init, ..), ...), ...)
-//       container      - the container holding this value, or null, if at root (first call)
 //       key,           - if within object, it is a string, if within array it is null
 //       i,             - if within array, it is the array index, if within object it is the
 //                        count of the key/value pair (insertion order)
-//       type_code,     - { 0: err, 1: obj, 2: arr, 3, str, 5: num, 6: boo, 7: nul }.  module exported as 'tcode'.
+//       type_code,     - { 0: err, 1: obj, 2: arr, 3, str, 5: num, 6: boo, 7: nul, 8: function }.  See 'TCODE' export
 //       value,         - the object or array value
 //       path,          - an array holding keys/indexes of the current path (values are changed-in-place.  make a copy to preserve values)
+//       pstate,        - an array that can hold custom state for every container in the current path.
+//                          pstate[path.length] is the current parent (one longer than path).  values are undefined until set.
 //       control        - an object that controls iteration and replacement
 //           walk
 //                      'continue': continues the walk over all values (this is the default)
@@ -27,10 +28,6 @@ var assign = require('qb-assign')
 //
 //   options        (object - optional)
 //
-//      map_mode        string - enables replacement of values or construction of a new object hierarchy
-//                      'keys'   use the returned fn values to modify keys in objects rather than values (only objects are changed)
-//                      'vals'   (default) use the returned fn values to construct new arrays and objects (deep copy)
-//
 //      typ_select      - inclusive list of types to include in the walk (callback): [ obj, arr, str, int, num, boo, nul ]
 //
 //      key_select      - function (key, path)
@@ -42,16 +39,18 @@ var assign = require('qb-assign')
 //
 function walk (v, cb, init, opt) {
     opt = opt || {}
+    opt.dst_fn = opt.dst_fn || function (tcode, v) { return v }
 
     var tcode = typecode(v)
-    var path = []
+    var path = []           // does not include root
+    var pstate = []         // includes root
     var carry = init
     var control = { walk: 'continue' }
     if (!opt.typ_select || opt.typ_select(tcode, path)) {
-        carry = cb(init, null, 0, tcode, v, path, control)
+        carry = cb(init, null, 0, tcode, v, path, pstate, control)
     }
     if (control.walk === 'continue') {
-        carry = walk_container(v, cb, carry, opt, path, control)
+        carry = walk_container(v, cb, carry, opt, path, pstate, control)
     }
     return carry
 }
@@ -85,20 +84,20 @@ function typecode (v) {
     }
 }
 
-// map_dst, if set, will be populated with results from cb()
-function walk_container (container, cb, carry, opt, path, control) {
+function walk_container (src, cb, carry, opt, path, pstate, control) {
     if (control.walk === 'stop') { return carry }
 
-    var in_object = !Array.isArray(container)
-    var keys_or_vals = in_object ? Object.keys(container) : container
+    var in_object = !Array.isArray(src)
+    var keys_or_vals = in_object ? Object.keys(src) : src
     var depth = path.length
+    pstate[depth + 1] = undefined
     for (var i = 0; i < keys_or_vals.length; i++) {
         var k = in_object ? keys_or_vals[i] : null
         path[depth] = k || i
         if (in_object && opt.key_select && !opt.key_select(k, path)) {
             continue
         }
-        var v = container[k || i]
+        var v = src[k || i]
         var tcode = typecode(v)
         if (opt.typ_select && !opt.typ_select(tcode, path)) {
             continue
@@ -106,9 +105,9 @@ function walk_container (container, cb, carry, opt, path, control) {
 
         var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
         // carry/reduce (not map-mode)
-        carry = cb(carry, k, i, tcode, v, path, control)
+        carry = cb(carry, k, i, tcode, v, path, pstate, control)
         if (control.walk === 'continue' && is_container) {
-            carry = walk_container(v, cb, carry, opt, path, control)
+            carry = walk_container(v, cb, carry, opt, path, pstate, control)
             // control may be modifed from this call or above cb()
         }
 
@@ -123,33 +122,9 @@ function walk_container (container, cb, carry, opt, path, control) {
 
     if (path.length > depth) {
         path.length = depth
+        pstate.length = depth + 1
     }
     return carry
-}
-
-function map_vals_in_situ_cb (fn) {
-    return function (carry, k, i, tcode, v, path) {
-        switch (tcode) {
-            case TCODE.ARR: case TCODE.OBJ: return v
-            default:                        return fn(k == null ? i : k, v, i, path)
-        }
-    }
-}
-
-function map_vals_cb (fn) {
-    return function (carry, k, i, tcode, v, path) {
-        switch (tcode) {
-            case TCODE.ARR: return []
-            case TCODE.OBJ: return {}
-            default:        return fn(k == null ? i : k, v, i, path)
-        }
-    }
-}
-
-function map_key_cb (fn) {
-    return function (carry, k, i, tcode, v, path) {
-        return fn(k, v, i, path)
-    }
 }
 
 module.exports = {
@@ -178,66 +153,6 @@ module.exports = {
     oo_get: function (o, k1, k2) {
         return o[k1] && o[k1][k2]
     },
-    // return a new object with either keys or values returned by the given fn() (see opt.keys).
-    // This is a simple shallow traversal.   For nested traversal, see mapw().
-    // fn
-    //      k       the property key
-    //      v       the property value
-    //      i       the index of the property value
-    // opt
-    //      map_mode    str
-    //                      'keys' the returned object will use the keys returned from fn()
-    //                      'vals' (default) the returned object will consist of values returned from fn()
-    //
-    map: function (o, fn, opt) {
-        var ret = {}
-        var keys = Object.keys(o)
-        var len = keys.length
-        var i
-        if (opt && opt.map_mode === 'keys') {
-            for (i=0; i<len; i++) { ret[fn(keys[i], o[keys[i]], i)] = o[keys[i]] }
-        } else {
-            for (i=0; i<len; i++) { ret[keys[i]] = fn(keys[i], o[keys[i]], i) }
-        }
-        return ret
-    },
-
-    // A walk-based map function performing nested traversal and replacement.
-    // By default, creates new objects.  Use opt.map_in_place to modify the
-    // given object in-place.
-    //
-    // c            the container (array or object) to map
-    //
-    // fn
-    //      ki      str|int      - array index (number) or object key (string)
-    //      v       !(arr|obj)   - the value of current leaf item (non-container)
-    //      i       int          - the index of the property value (same as i for arrays)
-    //      path    [str|int]    - the current location path (array - see walk function)
-    //
-    // opt
-    //      map_mode        str
-    //                          'keys'   use the returned fn values to modify keys in objects rather than values (only objects are changed)
-    //                          'vals'   (default) use the returned fn values to construct new arrays and objects (deep copy)
-    //                          'vals-in-situ' use the returned fn values to modify objects and arrays in-place.
-    //
-    //      key_select      same as walk option
-    //      typ_select      same as walk option
-    //
-
-    mapw: function (c, fn, opt) {
-        opt = assign({}, opt)
-        var in_situ = opt.map_mode === 'vals-in-situ'
-        opt.map_mode = opt.map_mode === 'keys' ? 'keys' : 'vals'    // walk has just two map modes: 'keys' and 'vals'
-        var cb
-        var init = null
-        if (in_situ) {
-            cb = map_vals_in_situ_cb(fn)
-        } else {
-            init = Array.isArray(c) ? [] : {}
-            cb = opt.map_mode === 'keys' ? map_key_cb(fn) : map_vals_cb(fn)
-        }
-        return walk(c, cb, init, opt)
-    },
-    tcode: TCODE,
     walk: walk,
+    TCODE: TCODE,
 }

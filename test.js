@@ -1,10 +1,10 @@
 var test = require('test-kit').tape()
 var obj = require('.')
-var TCODE = obj.tcode
+var TCODE = obj.TCODE
 
 function err (msg) { throw Error(msg) }
 function path_and_val (control_fn, with_i) {
-    return function (carry, k, i, tcode, v, path, control) {
+    return function (carry, k, i, tcode, v, path, pstate, control) {
         var vstr
         switch (tcode) {
             case TCODE.ARR: vstr = '[' + v.length + ']'; break
