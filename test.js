@@ -100,12 +100,12 @@ test('walk control', function (t) {
 
     t.table_assert([
         [ 'o',                          'cb',                  'init',   'opt',   'exp' ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(5, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(4, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(3, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'x:[1]', 'x/0:8'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(2, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'x:[1]', 'x/0:8' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(1, 'skip'),   [],       null,    [ 'R:{2}', 'a:{1}' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(0, 'skip'),   [],       null,    [ 'R:{2}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(5, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(4, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(3, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(2, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'x:[1]', 'x/0:8' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(1, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(0, 'skip_peers'),   [],       null,    [ 'R:{2}' ] ],
         [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(5, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
         [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(4, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5' ] ],
         [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(3, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}' ] ],
@@ -134,15 +134,16 @@ test('vals', function (t) {
 })
 
 test('map', function (t) {
-    var kvi = function(k, i, tcode, v) { return (k||i) + '.' + val2str(tcode, v)}
+    var kvi = function(k, i, tcode, v) { return (k || i) + '.' + val2str(tcode, v)}
     t.table_assert([
-        [ 'o',                          'fn',   'opt',                  'exp' ],
-        [ {},                           null,   null,                   {} ],
-        [ {a:3, b:7, c:13},             kvi,    {map_mode:'vals'},      { a: 'a.3', b: 'b.7', c: 'c.13' } ],
-        [ {a:3, b:[7,8], c:13},         kvi,    {map_mode:'vals'},      { a: 'a.3', b: [ '0.7', '1.8' ], c: 'c.13' } ],
-        [ {},                           null,   {map_mode:'keys'},      {} ],
-        [ {a:3, b:7, c:13},             kvi,    {map_mode:'keys'},      { 'a.3': 3, 'b.7': 7, 'c.13': 13 } ],
-        [ {a:3, b:{z:[7,8]}, c:13},     kvi,    {map_mode:'keys'},      { 'a.3': 3, 'b.{1}': { 'z.[2]': [ 7, 8 ] }, 'c.13': 13 } ],
+        [ 'o',                          'kfn',    'vfn',    'opt',              'exp' ],
+        [ {},                           null,     null,     null,               {} ],
+        [ {a:3, b:7, c:13},             null,     kvi,      {},                 { a: 'a.3', b: 'b.7', c: 'c.13' } ],
+        [ {a:3, b:[7,8], c:13},         null,     kvi,      {},                 { a: 'a.3', b: [ '0.7', '1.8' ], c: 'c.13' } ],
+        [ {},                           null,     null,     {},                 {} ],
+        [ {a:3, b:7, c:13},             kvi,      null,      {},                 { 'a.3': 3, 'b.7': 7, 'c.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {},                 { 'a.3': 3, 'b.{1}': { 'z.[2]': [ 7, 8 ] }, 'c.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {init: {q:9}},      { q:9, 'a.3': 3, 'b.{1}': { 'z.[2]': [ 7, 8 ] }, 'c.13': 13 } ],
     ], obj.map)
 })
 

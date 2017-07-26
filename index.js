@@ -80,6 +80,9 @@ function typecode (v) {
     }
 }
 
+var TCODE_STR = Object.keys(TCODE).reduce(function (a,k) { a[TCODE[k]]=k; return a }, [])
+function tcode_str (tcode) { return TCODE_STR[tcode] || ('unknown(' + tcode + ')'  ) }
+
 function walk_container (src, cb, carry, opt, path, pstate, control) {
     var in_object = !Array.isArray(src)
     var keys_or_vals = in_object ? Object.keys(src) : src
@@ -104,7 +107,7 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
             // control may be modifed from this call or above cb()
         }
 
-        if (control.walk === 'skip') {
+        if (control.walk === 'skip_peers') {
             control.walk = 'continue'
             break
         }
@@ -120,19 +123,50 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
     return carry
 }
 
-function map (o, fn, opt) {
-    var map_keys = opt && opt.map_mode === 'keys'
+function err (msg) { throw Error( msg) }
+
+//
+//
+// kfn (            function if provided, maps keys to new keys (maintaining order)
+//     k            object key, or null for arrays
+//     i            array index or object item number (ordered)
+//     tcode        value type code (TCODE)
+//     v            value
+//     path         array path (keys and indexes)
+// )
+// vfn (            function if provided maps values to new values (maintaining order)
+//     k            object key, or null for arrays
+//     i            array index or object item number (ordered)
+//     tcode        value type code (TCODE)
+//     v            value
+//     path         array path (keys and indexes)
+// )
+//
+// opt {
+//     init         object, if provided will be used as the root object to populate
+// }
+//
+function map (o, kfn, vfn, opt) {
+    opt = opt || {}
+    var init = opt.init || {}
     return walk(o, function (carry, k, i, tcode, v, path, pstate) {
-        if (map_keys) {
-            k = k && fn(k, i, tcode, v, path)
+        if (kfn) {
+            k = k && kfn(k, i, tcode, v, path)
         }
         var parent = pstate[pstate.length-1]
         switch (tcode) {
             case TCODE.ARR: v = []; pstate.push(v); break
-            case TCODE.OBJ: v = {}; pstate.push(v); break
+            case TCODE.OBJ:
+                if (init) {
+                    v = init; init = null
+                } else {
+                    v = {}
+                }
+                pstate.push(v)
+                break
             default:
-                if (!map_keys) {
-                    v = fn(k, i, tcode, v, path)
+                if (vfn) {
+                    v = vfn(k, i, tcode, v, path)
                 }
         }
         if (parent) {
@@ -171,4 +205,5 @@ module.exports = {
     walk: walk,
     map: map,
     TCODE: TCODE,
+    tcode_str: tcode_str,
 }
