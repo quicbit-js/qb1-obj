@@ -89,7 +89,7 @@ test('walk - typ_select', function (t) {
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
 })
 
-test.only('walk control', function (t) {
+test('walk control', function (t) {
     var maxdepth_cb = function (maxdepth, control_arg) {
         return path_and_val(
             function (k, i, tcode, v, path, control) {
