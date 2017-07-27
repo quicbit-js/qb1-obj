@@ -107,6 +107,9 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
             // control may be modifed from this call or above cb()
         }
 
+        if (control.walk === 'skip') {
+            control.walk = 'continue'
+        }
         if (control.walk === 'skip_peers') {
             control.walk = 'continue'
             break

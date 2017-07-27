@@ -89,30 +89,36 @@ test('walk - typ_select', function (t) {
     ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
 })
 
-test('walk control', function (t) {
-    var maxdepth = function (maxdepth, skip_stop) {
+test.only('walk control', function (t) {
+    var maxdepth_cb = function (maxdepth, control_arg) {
         return path_and_val(
             function (k, i, tcode, v, path, control) {
-                if (path.length === maxdepth) { control.walk = skip_stop }
+                if (path.length === maxdepth) { control.walk = control_arg }
             }
         )
     }
 
     t.table_assert([
-        [ 'o',                          'cb',                  'init',   'opt',   'exp' ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(5, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(4, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(3, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'x:[1]', 'x/0:8'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(2, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'x:[1]', 'x/0:8' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(1, 'skip_peers'),   [],       null,    [ 'R:{2}', 'a:{1}' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(0, 'skip_peers'),   [],       null,    [ 'R:{2}' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(5, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(4, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(3, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(2, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]'  ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(1, 'stop'),   [],       null,    [ 'R:{2}', 'a:{1}' ] ],
-        [ {a:{b:[{c:5,d:6},7]},x:[8]},      maxdepth(0, 'stop'),   [],       null,    [ 'R:{2}' ] ],
-    ], obj.walk )
+        [ 'o',                         'depth', 'control_arg',  'init', 'opt',   'exp' ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      5,  'skip_peers',   [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      4,  'skip_peers',   [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      3,  'skip_peers',   [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      2,  'skip_peers',   [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'x:[1]', 'x/0:8' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      1,  'skip_peers',   [],     null,    [ 'R:{2}', 'a:{1}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      0,  'skip_peers',   [],     null,    [ 'R:{2}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      5,  'skip',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      4,  'skip',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      3,  'skip',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      2,  'skip',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'x:[1]', 'x/0:8' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      1,  'skip',         [],     null,    [ 'R:{2}', 'a:{1}', 'x:[1]' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      0,  'skip',         [],     null,    [ 'R:{2}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      5,  'stop',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5', 'a/b/0/d:6', 'a/b/1:7', 'x:[1]', 'x/0:8'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      4,  'stop',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}', 'a/b/0/c:5' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      3,  'stop',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]', 'a/b/0:{2}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      2,  'stop',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]'  ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      1,  'stop',         [],     null,    [ 'R:{2}', 'a:{1}' ] ],
+        [ {a:{b:[{c:5,d:6},7]},x:[8]},      0,  'stop',         [],     null,    [ 'R:{2}' ] ],
+    ], function (o, depth, control_arg, init, opt) {return obj.walk(o, maxdepth_cb(depth, control_arg), init, opt)} )
 })
 
 test('keys', function (t) {
