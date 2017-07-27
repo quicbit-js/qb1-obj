@@ -103,18 +103,14 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
         // carry/reduce (not map-mode)
         carry = cb(carry, k, i, tcode, v, path, pstate, control)
         if (control.walk === 'continue' && is_container) {
-            carry = walk_container(v, cb, carry, opt, path, pstate, control)
-            // control may be modifed from this call or above cb()
+            carry = walk_container(v, cb, carry, opt, path, pstate, control)  // NOTE: this can modify control value
         }
-
         if (control.walk === 'skip') {
             control.walk = 'continue'
-        }
-        if (control.walk === 'skip_peers') {
+        } else if (control.walk === 'skip_peers') {
             control.walk = 'continue'
             break
-        }
-        if (control.walk === 'stop') {
+        } else if (control.walk === 'stop') {
             return carry
         }
     }
