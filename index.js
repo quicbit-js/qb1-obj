@@ -80,9 +80,6 @@ function typecode (v) {
     }
 }
 
-var TCODE_STR = Object.keys(TCODE).reduce(function (a,k) { a[TCODE[k]]=k; return a }, [])
-function tcode_str (tcode) { return TCODE_STR[tcode] || ('unknown(' + tcode + ')'  ) }
-
 function walk_container (src, cb, carry, opt, path, pstate, control) {
     var in_object = !Array.isArray(src)
     var keys_or_vals = in_object ? Object.keys(src) : src
@@ -121,8 +118,6 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
     }
     return carry
 }
-
-function err (msg) { throw Error( msg) }
 
 //
 //
@@ -204,5 +199,4 @@ module.exports = {
     walk: walk,
     map: map,
     TCODE: TCODE,
-    tcode_str: tcode_str,
 }
