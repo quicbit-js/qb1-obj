@@ -181,6 +181,15 @@ module.exports = {
         }
         return ret
     },
+    filter: function (o, fn) {
+        var ret = {}
+        var keys = keys || Object.keys(o)
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i]
+            if (fn(k,o[k],i)) { ret[k] = o[k] }
+        }
+        return ret
+    },
     oa_push: function (o, k, v) {
         var a = o[k]
         if (!a) { o[k] = a = [] }

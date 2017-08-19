@@ -153,6 +153,26 @@ test('map', function (t) {
     ], obj.map)
 })
 
+test('filter', function (t) {
+    var sel_k = function (kexpr) { return function (k) { return kexpr.test(k) } }
+    var sel_v = function (vmax) { return function (k,v) { return v <= vmax } }
+    var sel_i = function (imax) { return function (k,v,i) { return i <= imax } }
+    t.table_assert([
+        [ 'o',              'fn',               'exp' ],
+        [ {},               null,               {} ],
+        [ {a:9, b:7},      sel_k(/x/),          {} ],
+        [ {a:9, b:7},      sel_k(/a/),          {a:9} ],
+        [ {a:9, b:7},      sel_k(/b/),          {b:7} ],
+        [ {a:9, b:7},      sel_v(3),            {} ],
+        [ {a:9, b:7},      sel_v(7),            {b:7} ],
+        [ {a:9, b:7},      sel_v(9),            {a:9,b:7} ],
+        [ {a:9, b:7},      sel_i(-1),           {} ],
+        [ {a:9, b:7},      sel_i(0),            {a:9} ],
+        [ {a:9, b:7},      sel_i(1),            {a:9,b:7} ],
+
+    ], obj.filter)
+})
+
 /*
 test('walk exception', function (t) {
     var fn = function chewy () {}
