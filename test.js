@@ -1,18 +1,18 @@
 var test = require('test-kit').tape()
-var obj = require('.')
-var TCODE = obj.TCODE
+var qbobj = require('.')
+var TCODES = qbobj.TCODES
 
 function err (msg) { throw Error(msg) }
 
 function val2str (tcode, v) {
     switch (tcode) {
-        case TCODE.ARR: return '[' + v.length + ']'
-        case TCODE.OBJ: return '{' + Object.keys(v).length + '}'
-        case TCODE.BOO: return v ? 'T' : 'F'
-        case TCODE.NUM:
-        case TCODE.STR: return String(v)
-        case TCODE.NUL: return 'N'
-        case TCODE.FUN: return 'F'; break
+        case TCODES.ARR: return '[' + v.length + ']'
+        case TCODES.OBJ: return '{' + Object.keys(v).length + '}'
+        case TCODES.BOO: return v ? 'T' : 'F'
+        case TCODES.NUM:
+        case TCODES.STR: return String(v)
+        case TCODES.NUL: return 'N'
+        case TCODES.FUN: return 'F'; break
     }
 }
 
@@ -54,7 +54,7 @@ test('walk', function (t) {
         [ [[[]]],                           [],         null,     [ 'R:[1]', '0:[1]', '0/0:[0]' ] ],
         [ [[{}]],                           [],         null,     [ 'R:[1]', '0:[1]', '0/0:{0}' ] ],
         [ [7,8,9],                          [],         null,     [ 'R:[3]', '0:7', '1:8', '2:9' ] ],
-    ], function (o, init, opt) { return obj.walk(o, path_and_val(null, true), init, opt)} )
+    ], function (o, init, opt) { return qbobj.walk(o, path_and_val(null, true), init, opt)} )
 })
 
 test('walk - key_select', function (t) {
@@ -70,7 +70,7 @@ test('walk - key_select', function (t) {
         [ {a:1, b:'foo', c:true, d:null},   [],         {key_select: ks(/b/,1)},     [ 'R:{4}', 'b:foo' ] ],
         [ {a:{x:1,y:2}},                    [],         {key_select: ks(/x/,2)},     [ 'R:{1}', 'a:{2}', 'a/x:1' ] ],
         [ {a:{x:1,y:2}},                    [],         {key_select: ks(/y/,2)},     [ 'R:{1}', 'a:{2}', 'a/y:2' ] ],
-    ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
+    ], function (o, init, opt) { return qbobj.walk(o, path_and_val(), init, opt)} )
 })
 
 test('walk - typ_select', function (t) {
@@ -81,12 +81,12 @@ test('walk - typ_select', function (t) {
     }
     t.table_assert([
         [ 'o',                              'init',     'opt',                          'exp' ],
-        [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,-1)}, [ 'first', 'R:{0}' ] ], // filter not applied
-        [ {},                               ['first'],  {typ_select: ts(TCODE.NUM,0)},  [ 'first' ] ],
-        [ {a:1},                            ['first'],  {typ_select: ts(TCODE.NUM,1)},  [ 'first', 'R:{1}', 'a:1' ] ],
-        [ {a:[1,2,3], b:true, d:null, e:7}, [],         {typ_select: ts(TCODE.NUM,1)},  [ 'R:{4}', 'e:7' ] ],
-        [ {a:[1,'b',3], b:true, d:null, e:7}, [],       {typ_select: ts(TCODE.NUM,2)},  [ 'R:{4}', 'a:[3]', 'a/0:1', 'a/2:3', 'b:T', 'd:N', 'e:7' ] ],
-    ], function (o, init, opt) { return obj.walk(o, path_and_val(), init, opt)} )
+        [ {},                               ['first'],  {typ_select: ts(TCODES.NUM,-1)}, [ 'first', 'R:{0}' ] ], // filter not applied
+        [ {},                               ['first'],  {typ_select: ts(TCODES.NUM,0)},  [ 'first' ] ],
+        [ {a:1},                            ['first'],  {typ_select: ts(TCODES.NUM,1)},  [ 'first', 'R:{1}', 'a:1' ] ],
+        [ {a:[1,2,3], b:true, d:null, e:7}, [],         {typ_select: ts(TCODES.NUM,1)},  [ 'R:{4}', 'e:7' ] ],
+        [ {a:[1,'b',3], b:true, d:null, e:7}, [],       {typ_select: ts(TCODES.NUM,2)},  [ 'R:{4}', 'a:[3]', 'a/0:1', 'a/2:3', 'b:T', 'd:N', 'e:7' ] ],
+    ], function (o, init, opt) { return qbobj.walk(o, path_and_val(), init, opt)} )
 })
 
 test('walk control', function (t) {
@@ -118,7 +118,7 @@ test('walk control', function (t) {
         [ {a:{b:[{c:5,d:6},7]},x:[8]},      2,  'stop',         [],     null,    [ 'R:{2}', 'a:{1}', 'a/b:[2]'  ] ],
         [ {a:{b:[{c:5,d:6},7]},x:[8]},      1,  'stop',         [],     null,    [ 'R:{2}', 'a:{1}' ] ],
         [ {a:{b:[{c:5,d:6},7]},x:[8]},      0,  'stop',         [],     null,    [ 'R:{2}' ] ],
-    ], function (o, depth, control_arg, init, opt) {return obj.walk(o, maxdepth_cb(depth, control_arg), init, opt)} )
+    ], function (o, depth, control_arg, init, opt) {return qbobj.walk(o, maxdepth_cb(depth, control_arg), init, opt)} )
 })
 
 test('keys', function (t) {
@@ -126,7 +126,7 @@ test('keys', function (t) {
         [ 'o',                      'exp' ],
         [ {},                       [] ],
         [ {a:1,b:2},                ['a','b'] ],
-    ], obj.keys)
+    ], qbobj.keys)
 })
 
 test('vals', function (t) {
@@ -134,23 +134,30 @@ test('vals', function (t) {
         [ 'o',                      'exp' ],
         [ {},                       [] ],
         [ {a:1,b:2,c:null},         [1,2,null] ],
-    ], function (o) {
-        return obj.vals(o)
-    })
+    ], qbobj.vals)
+})
+
+test('len', function (t) {
+    t.table_assert([
+        [ 'o',                          'exp' ],
+        [ {},                           0 ],
+        [ {a:1,b:2},                    2 ],
+        [ [1,2,3],                      3 ],
+    ], qbobj.len)
 })
 
 test('map', function (t) {
-    var kvi = function(k, i, tcode, v) { return (k || i) + '.' + val2str(tcode, v)}
+    var kvi = function(k, v, i) { return k + '@' + i + '.' + val2str(qbobj.tcode(v), v)}
     t.table_assert([
         [ 'o',                          'kfn',    'vfn',    'opt',              'exp' ],
         [ {},                           null,     null,     null,               {} ],
-        [ {a:3, b:7, c:13},             null,     kvi,      {},                 { a: 'a.3', b: 'b.7', c: 'c.13' } ],
-        [ {a:3, b:[7,8], c:13},         null,     kvi,      {},                 { a: 'a.3', b: [ '0.7', '1.8' ], c: 'c.13' } ],
+        [ {a:3, b:7, c:13},             null,     kvi,      {},                 { a: 'a@0.3', b: 'b@1.7', c: 'c@2.13' } ],
+        [ {a:3, b:[7,8], c:13},         null,     kvi,      {},                 { a: 'a@0.3', b: 'b@1.[2]', c: 'c@2.13' } ],
         [ {},                           null,     null,     {},                 {} ],
-        [ {a:3, b:7, c:13},             kvi,      null,      {},                 { 'a.3': 3, 'b.7': 7, 'c.13': 13 } ],
-        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {},                 { 'a.3': 3, 'b.{1}': { 'z.[2]': [ 7, 8 ] }, 'c.13': 13 } ],
-        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {init: {q:9}},      { q:9, 'a.3': 3, 'b.{1}': { 'z.[2]': [ 7, 8 ] }, 'c.13': 13 } ],
-    ], obj.map)
+        [ {a:3, b:7, c:13},             kvi,      null,      {},                 { 'a@0.3': 3, 'b@1.7': 7, 'c@2.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {},                 { 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {init: {q:9}},      { q: 9, 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
+    ], qbobj.map)
 })
 
 test('filter', function (t) {
@@ -170,7 +177,7 @@ test('filter', function (t) {
         [ {a:9, b:7},      sel_i(0),            {a:9} ],
         [ {a:9, b:7},      sel_i(1),            {a:9,b:7} ],
 
-    ], obj.filter)
+    ], qbobj.filter)
 })
 
 /*
@@ -241,15 +248,6 @@ test('mapw', function (t) {
 })
 */
 
-test('length', function (t) {
-    t.table_assert([
-        [ 'o',                          'exp' ],
-        [ {},                           0 ],
-        [ {a:1,b:2},                    2 ],
-        [ [1,2,3],                      3 ],
-    ], obj.len)
-})
-
 test('oo_put', function (t) {
     t.table_assert([
         [ 'o',              'k1',   'k2',   'v',    'exp' ],
@@ -258,7 +256,7 @@ test('oo_put', function (t) {
         [ {a:{b:7}},        'a',    'b',    8,      [7, {a:{b:8}}] ],
         [ {a:{b:7}},        'x',    'b',    2,      [undefined, {a:{b:7},x:{b:2}}] ],
 
-    ], function (o, k1, k2, v) { var prev = obj.oo_put(o, k1, k2, v); return [prev, o] } )
+    ], function (o, k1, k2, v) { var prev = qbobj.oo_put(o, k1, k2, v); return [prev, o] } )
 })
 
 test('oo_get', function (t) {
@@ -269,7 +267,7 @@ test('oo_get', function (t) {
         [ {a:{b:null}},     'a',    'b',   null ],
         [ {a:{b:4}},        'a',    'b',   4 ],
 
-    ], obj.oo_get )
+    ], qbobj.oo_get )
 })
 
 test('oa_push', function (t) {
@@ -280,6 +278,6 @@ test('oa_push', function (t) {
         [ {a:[3]},          'a',    7,      {a:[3,7]} ],
         [ {a:[3],b:[2]},    'a',    7,      {a:[3,7],b:[2]} ],
 
-    ], function (o, k, v) { obj.oa_push(o,k,v); return o } )
+    ], function (o, k, v) { qbobj.oa_push(o,k,v); return o } )
 })
 

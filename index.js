@@ -52,7 +52,7 @@ function walk (v, cb, init, opt) {
     return carry
 }
 
-var TCODE = {
+var TCODES = {
     OBJ: 1,
     ARR: 2,
     STR: 3,
@@ -65,18 +65,18 @@ var TCODE = {
 function typecode (v) {
     switch (typeof v) {
         case 'string':
-            return TCODE.STR
+            return TCODES.STR
         case 'number':
-            return TCODE.NUM
+            return TCODES.NUM
         case 'boolean':
-            return TCODE.BOO
+            return TCODES.BOO
         case 'undefined':
-            return TCODE.NUL
+            return TCODES.NUL
         case 'function':
-            return TCODE.FUN
+            return TCODES.FUN
         default:
             // default case handles 'object' including host objects that may occur in certain environments
-            return v === null ? TCODE.NUL : (Array.isArray(v) ? TCODE.ARR : TCODE.OBJ)
+            return v === null ? TCODES.NUL : (Array.isArray(v) ? TCODES.ARR : TCODES.OBJ)
     }
 }
 
@@ -96,7 +96,7 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
             continue
         }
 
-        var is_container = tcode === TCODE.ARR || tcode === TCODE.OBJ
+        var is_container = tcode === TCODES.ARR || tcode === TCODES.OBJ
         // carry/reduce (not map-mode)
         carry = cb(carry, k, i, tcode, v, path, pstate, control)
         if (control.walk === 'continue' && is_container) {
@@ -119,7 +119,42 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
     return carry
 }
 
+// simple map function (depth 1)
 //
+// kfn (            function if provided, maps keys to new keys (maintaining order)
+//     k            key
+//     v            value
+//     i            index (of object insert-order)
+// )
+// vfn (            function if provided maps values to new values (maintaining order)
+//     k            object key, or null for arrays
+//     v            value
+//     i            index (of object insert-order)
+// )
+//
+// opt {
+//     init         object, if provided will be used as the root object to populate
+// }
+//
+function map (o, kfn, vfn, opt) {
+    opt = opt || {}
+    var ret = opt.init || {}
+    var keys = Object.keys(o)
+    for (var i = 0; i < keys.length; i++) {
+        var k = keys[i]
+        var v = o[k]
+        if (kfn) {
+            k = kfn(k, v, i)
+        }
+        if (vfn) {
+            v = vfn(k, v, i)
+        }
+        ret[k] = v
+    }
+    return ret
+}
+
+// nested map function (not sure if this is needed)
 //
 // kfn (            function if provided, maps keys to new keys (maintaining order)
 //     k            object key, or null for arrays
@@ -140,7 +175,8 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
 //     init         object, if provided will be used as the root object to populate
 // }
 //
-function map (o, kfn, vfn, opt) {
+/*
+function mapn (o, kfn, vfn, opt) {
     opt = opt || {}
     var init = opt.init || {}
     return walk(o, function (carry, k, i, tcode, v, path, pstate) {
@@ -169,6 +205,7 @@ function map (o, kfn, vfn, opt) {
         return pstate[0]
     }, null, opt)
 }
+*/
 
 module.exports = {
     len: function (o) { return Object.keys(o).length },
@@ -205,7 +242,9 @@ module.exports = {
     oo_get: function (o, k1, k2) {
         return o[k1] && o[k1][k2]
     },
+
     walk: walk,
     map: map,
-    TCODE: TCODE,
+    tcode: typecode,
+    TCODES: TCODES,
 }
