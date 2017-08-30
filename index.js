@@ -119,7 +119,8 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
     return carry
 }
 
-// simple map function (depth 1)
+// maps keys and values to a new map of keys and values - null/undefined keys and values are
+// dropped by default.
 //
 // kfn (            function if provided, maps keys to new keys (maintaining order)
 //     k            key
@@ -134,12 +135,18 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
 //
 // opt {
 //     init         object, if provided will be used as the root object to populate
+//     keep_null    if true, null and undefined values are kept (however, returning nulls for keys will still drop)
+//     deep         array of property names, if given, will be included even in prototypes (beyond shallow mapping Object.keys())
 // }
 //
 function map (o, kfn, vfn, opt) {
     opt = opt || {}
     var ret = opt.init || {}
+    var keep_null = opt.keep_null
     var keys = Object.keys(o)
+    if (opt.deep) {
+        keys = opt.deep.concat(keys)
+    }
     for (var i = 0; i < keys.length; i++) {
         var k = keys[i]
         var v = o[k]
@@ -149,7 +156,9 @@ function map (o, kfn, vfn, opt) {
         if (vfn) {
             v = vfn(k, v, i)
         }
-        ret[k] = v
+        if (k != null && (keep_null || v != null)) {
+            ret[k] = v
+        }
     }
     return ret
 }

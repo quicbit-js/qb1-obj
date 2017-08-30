@@ -147,16 +147,33 @@ test('len', function (t) {
 })
 
 test('map', function (t) {
-    var kvi = function(k, v, i) { return k + '@' + i + '.' + val2str(qbobj.tcode(v), v)}
+    var kvi = function (k, v, i) { return k + '@' + i + '.' + val2str(qbobj.tcode(v), v)}
+    var kgt = function (lim) { return function (k) { return k > lim ? k : null } }
+    var vgt = function (lim) { return function (k,v) { return v > lim ? v : null } }
     t.table_assert([
         [ 'o',                          'kfn',    'vfn',    'opt',              'exp' ],
         [ {},                           null,     null,     null,               {} ],
+        [ {a:3, b:null, c:13},          null,     null,      {},                { a:3, c:13 } ],
         [ {a:3, b:7, c:13},             null,     kvi,      {},                 { a: 'a@0.3', b: 'b@1.7', c: 'c@2.13' } ],
-        [ {a:3, b:[7,8], c:13},         null,     kvi,      {},                 { a: 'a@0.3', b: 'b@1.[2]', c: 'c@2.13' } ],
-        [ {},                           null,     null,     {},                 {} ],
-        [ {a:3, b:7, c:13},             kvi,      null,      {},                 { 'a@0.3': 3, 'b@1.7': 7, 'c@2.13': 13 } ],
-        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {},                 { 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
-        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,      {init: {q:9}},      { q: 9, 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
+        [ {a:3, b:7, c:13},             kvi,      null,     {},                 { 'a@0.3': 3, 'b@1.7': 7, 'c@2.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,     {},                 { 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,     {init: {q:9}},      { q: 9, 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
+        [ {b:2, c:7, d:2},              kgt('b'), null,     {init: {a:1}},      { a:1, c:7, d:2 } ],
+        [ {b:3, c:7, d:2},              null,     vgt(2),   {},                 { b:3, c:7 } ],
+        [ {b:3, c:7, d:2},              kgt('b'), vgt(2),   {},                 { c:7 } ],
+        [ {b:3, c:7, d:2},              kgt('b'), vgt(2),   {keep_null: 1},     { c:7, d:null } ],
+    ], qbobj.map)
+})
+
+test('map deep', function (t) {
+    A = function() { this.a = 3 }
+    A.prototype.b = 4
+    var ab = new A()
+    var a = new A()
+    t.table_assert([
+        [ 'o',                          'kfn',    'vfn',    'opt',              'exp' ],
+        [ ab,                           null,     null,     null,               {a:3} ],
+        [ ab,                           null,     null,     {deep: ['b']},      {a:3, b:4} ],
     ], qbobj.map)
 })
 
