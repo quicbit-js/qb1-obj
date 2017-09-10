@@ -13,8 +13,6 @@ var assign = require('qb-assign')
 //       type_code,     - { 0: err, 1: obj, 2: arr, 3, str, 5: num, 6: boo, 7: nul, 8: function }.  See 'TCODE' export
 //       value,         - the object or array value
 //       path,          - an array holding keys/indexes of the current path (values are changed-in-place.  make a copy to preserve values)
-//       pstate,        - an array that can hold custom state for every container in the current path.
-//                          pstate[path.length] is the current parent (one longer than path).  values are undefined until set.
 //       control        - an object that controls iteration and replacement
 //           walk
 //                      'continue': continues the walk over all values (this is the default)
@@ -40,14 +38,13 @@ function walk (v, cb, init, opt) {
     opt = opt || {}
     var tcode = typecode(v)
     var path = []
-    var pstate = []
     var carry = init
     var control = { walk: 'continue' }
     if (!opt.typ_select || opt.typ_select(tcode, path)) {
-        carry = cb(init, null, 0, tcode, v, path, pstate, control)
+        carry = cb(init, null, 0, tcode, v, path, control)
     }
     if (control.walk === 'continue') {
-        carry = walk_container(v, cb, carry, opt, path, pstate, control)
+        carry = walk_container(v, cb, carry, opt, path, control)
     }
     return carry
 }
@@ -80,7 +77,7 @@ function typecode (v) {
     }
 }
 
-function walk_container (src, cb, carry, opt, path, pstate, control) {
+function walk_container (src, cb, carry, opt, path, control) {
     var in_object = !Array.isArray(src)
     var keys_or_vals = in_object ? Object.keys(src) : src
     var depth = path.length
@@ -98,9 +95,9 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
 
         var is_container = tcode === TCODES.ARR || tcode === TCODES.OBJ
         // carry/reduce (not map-mode)
-        carry = cb(carry, k, i, tcode, v, path, pstate, control)
+        carry = cb(carry, k, i, tcode, v, path, control)
         if (control.walk === 'continue' && is_container) {
-            carry = walk_container(v, cb, carry, opt, path, pstate, control)  // NOTE: this can modify control value
+            carry = walk_container(v, cb, carry, opt, path, control)  // NOTE: this can modify control value
         }
         if (control.walk === 'skip') {
             control.walk = 'continue'
@@ -114,7 +111,6 @@ function walk_container (src, cb, carry, opt, path, pstate, control) {
 
     if (path.length > depth) {
         path.length = depth
-        pstate.length = depth
     }
     return carry
 }

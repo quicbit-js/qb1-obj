@@ -17,7 +17,7 @@ function val2str (tcode, v) {
 }
 
 function path_and_val (control_fn, with_i) {
-    return function (carry, k, i, tcode, v, path, pstate, control) {
+    return function (carry, k, i, tcode, v, path, control) {
         var last = path[path.length - 1] || 0
         var pstr = path.join('/') || 'R'        // return 'R' for root
         if (k === null) {
