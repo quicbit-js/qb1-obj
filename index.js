@@ -1,5 +1,3 @@
-var assign = require('qb-assign')
-
 // walk: iterate over any javascript value (object, array, string, number, null...) and all nested values invoking a
 // callback.
 //
