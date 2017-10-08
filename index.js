@@ -157,58 +157,70 @@ function map (o, kfn, vfn, opt) {
     return ret
 }
 
-// nested map function (not sure if this is needed)
+// nested map function
 //
-// kfn (            function if provided, maps keys to new keys (maintaining order)
+// kfn if provided, maps keys to new keys.  returning null will prune the object (skip value).
+// kfn (
 //     k            object key, or null for arrays
+//     v            value
 //     i            array index or object item number (ordered)
 //     tcode        value type code (TCODE)
-//     v            value
 //     path         array path (keys and indexes)
 // )
-// vfn (            function if provided maps values to new values (maintaining order)
+// returns          the new key, or null to skip / prune
+//
+//
+// vfn, if provided maps *leaf* values to new values.  only called for terminals / leaves, not for objects and arrays
+// vfn (
 //     k            object key, or null for arrays
+//     v            value
 //     i            array index or object item number (ordered)
 //     tcode        value type code (TCODE)
-//     v            value
 //     path         array path (keys and indexes)
 // )
+// returns          the new value, or null to skip / prune.  null values are pruned by default.
 //
 // opt {
 //     init         object, if provided will be used as the root object to populate
+//     containers
 // }
 //
-/*
+// Notes - possible extensions -
+//          make pruning null values optional
+//          allow visiting objects and arrays, but handle skip / continue of object to terminal (skips always).
+//              disallow modify-in-place (create new container if v === fn(v)?)
+//
 function mapn (o, kfn, vfn, opt) {
     opt = opt || {}
-    var init = opt.init || {}
-    return walk(o, function (carry, k, i, tcode, v, path, pstate) {
-        if (kfn) {
-            k = k && kfn(k, i, tcode, v, path)
+    var pstate = []
+    return walk(o, function (carry, k, i, tcode, v, path, control) {
+        if (path.length === 0 && opt.init) {
+            pstate.push(opt.init)
+            return opt.init
+        }
+        pstate.length = path.length  // keep parent state in sync with depth
+        if (k && kfn) {
+            k = kfn(k, v, i, tcode, path)
+            if (k == null) {
+                control.walk = 'skip'
+                return pstate[0]
+            }
         }
         var parent = pstate[pstate.length-1]
         switch (tcode) {
-            case TCODE.ARR: v = []; pstate.push(v); break
-            case TCODE.OBJ:
-                if (init) {
-                    v = init; init = null
-                } else {
-                    v = {}
-                }
-                pstate.push(v)
-                break
+            case TCODES.ARR: v = []; pstate.push(v); break
+            case TCODES.OBJ: v = {}; pstate.push(v); break
             default:
                 if (vfn) {
-                    v = vfn(k, i, tcode, v, path)
+                    v = vfn(k, v, i, tcode, path)
                 }
         }
-        if (parent) {
+        if (parent && v != null) {
             parent[k || i] = v
         }
         return pstate[0]
     }, null, opt)
 }
-*/
 
 module.exports = {
     len: function (o) { return Object.keys(o).length },
@@ -248,6 +260,7 @@ module.exports = {
 
     walk: walk,
     map: map,
+    mapn: mapn,
     tcode: typecode,
     TCODES: TCODES,
 }

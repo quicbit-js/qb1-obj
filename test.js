@@ -197,73 +197,40 @@ test('filter', function (t) {
     ], qbobj.filter)
 })
 
-/*
-test('walk exception', function (t) {
-    var fn = function chewy () {}
-    t.table_assert([
-        [ 'o',                              'init',   'opt',   'exp' ],
-        [ 5,                                [],       {map_mode:'keys'},    /expected array or object/ ],
-        [ 5,                                [],       {map_mode:'vals'},    /expected array or object/ ],
-    ], function (o, init, opt) { obj.walk(o, path_and_val(), [], opt)}, {assert:'throws'} )
-})
-
-test('walk - map_carry in-place', function (t) {
-    var in_situ_cb = function (regex, nv) {
-        return function (carry, k, i, tcode, v, path) {
-            switch (tcode) {
-                case TCODE.ARR: case TCODE.OBJ:     return v
-                default:                            return regex.test(k || String(i)) ? nv : v
-            }
-        }
-    }
-
-    t.table_assert([
-        [ 'o',                          'cb',                     'opt',            'exp' ],
-        [ {a:7},                        in_situ_cb(/a/, 3),       {map_mode:'vals'},   [true, {a:3}] ],
-        [ {a:{b:7}},                    in_situ_cb(/b/, 3),       {map_mode:'vals'},   [true, {a:{b:3}}] ],
-        [ {a:[7,8,9]},                  in_situ_cb(/1/, 3),       {map_mode:'vals'},   [true, {a:[7,3,9]}] ],
-        [ [7,8,9],                      in_situ_cb(/1/, 3),       {map_mode:'vals'},   [true, [7,3,9]] ],
-    ], function (o, cb, opt) { var n = obj.walk(o, cb, null, opt); return [n === o, n]} )
-})
-
-test('walk - map_carry - replace containers', function (t) {
-    var dreplace = function (depth) {
-        return function (carry, k, i, tcode, v, path, control) {
-            return path.length === depth ? ('i=' + i) : v
-        }
-    }
-
-    t.table_assert([
-        [ 'o',                          'cb',                   'init', 'opt',           'exp' ],
-        [ {a:7},                        dreplace(0),            {},     {map_mode:'vals'},   'i=0' ],
-        [ {a:7,b:8},                    dreplace(1),            {},     {map_mode:'vals'},   {a:'i=0',b:'i=1'} ],
-        [ {a:{x:[7,8,9]},b:8},          dreplace(2),            {},     {map_mode:'vals'},   {a:{x:'i=0'},b:8} ],
-        [ {a:{x:[7,8,9]},b:8},          dreplace(3),            {},     {map_mode:'vals'},   {a:{x:['i=0','i=1','i=2' ]},b:8} ],
-    ], obj.walk )
-})
-
-test('mapw', function (t) {
+test('mapn', function (t) {
     var ki = function(k,v,i) {
         return k + i
     }
     var vi3 = function(k,v,i) {return v*(i+3)}
+    var nullval = function (val_to_null) {
+        return function (k,v,i) {
+            return v === val_to_null ? null : v
+        }
+    }
+    var nullkey = function (key_to_null) {
+        return function (k,v,i) {
+            return k === key_to_null ? null : k
+        }
+    }
+
     t.table_assert([
-        [ 'o',                          'fn',   'opt',                      'exp' ],
-        [ {},                           null,   null,                       [false, {}] ],
-        [ {a:1,b:2},                    ki,     {map_mode:'keys'},          [false, {a0:1,b1:2}] ],
-        [ {a:1,b:{x:7,y:8},c:2},        ki,     {map_mode:'keys'},          [false, {a0:1,b1:{x0:7,y1:8},c2:2 } ] ],
-        [ {a:1,b:[7,8],c:2},            ki,     {map_mode:'keys'},          [false, {a0:1,b1:[7,8],c2:2 } ] ],
-        [ [1,[7,{a:8}],2],              ki,     {map_mode:'keys'},          [false, [1,[7,{a0:8}],2] ] ],
-        [ {a:1,b:2},                    vi3,    {map_mode:'vals'},          [false, {a:3,b:8}] ],
-        [ {a:1,b:{x:7,y:8},c:2},        vi3,    {map_mode:'vals'},          [false, { a: 3, b: { x: 21, y: 32 }, c: 10 }] ],
-        [ {a:1,b:{x:7,y:8},c:2},        vi3,    {map_mode:'vals-in-situ'},  [true, { a: 3, b: { x: 21, y: 32 }, c: 10 }] ],
-        [ {a:3,b:7,c:[5,9]},            vi3,    {map_mode:'vals'},          [false,{a:9,b:28,c:[15,36]}] ],
-        [ {a:3,b:7,c:[{d:[1,3,5]},9]},  vi3,    {map_mode:'vals'},          [false,{a:9,b:28,c:[{d:[3,12,25]},36]}] ],
-        [ [3,7,[{d:[1,3,5]},9]],        vi3,    {map_mode:'vals'},          [false,[9,28,[{d:[3,12,25]},36]]] ],
-        [ [3,7,[{d:[1,3,5]},9]],        vi3,    {map_mode:'vals-in-situ'},  [true,[9,28,[{d:[3,12,25]},36]]] ],
-    ], function(o, fn, opt) { var n = obj.mapw(o, fn, opt); return [n === o, n] })
+        [ 'o',                          'kfn',      'vfn',      'opt',              'exp' ],
+        [ {},                           null,       null,       null,               {}],
+        [ {a:1,b:2},                    ki,         null,       null,               {a0:1,b1:2}],
+        [ {a:1,b:{x:7,y:8},c:2},        ki,         null,       null,               {a0:1,b1:{x0:7,y1:8},c2:2 }],
+        [ {a:1,b:[7,8],c:2},            ki,         null,       null,               {a0:1,b1:[7,8],c2:2 }],
+        [ [1,[7,{a:8}],2],              ki,         null,       null,               [1,[7,{a0:8}],2]],
+        [ {a:1,b:2},                    null,       vi3,        null,               {a:3,b:8}],
+        [ {a:1,b:{x:7,y:8},c:2},        null,       vi3,        null,               { a: 3, b: { x: 21, y: 32 }, c: 10 }],
+        [ {a:1,b:{x:7,y:8},c:2},        null,       vi3,        {init: {z:7}},      { z: 7, a: 3, b: { x: 21, y: 32 }, c: 10 }],
+        [ {a:3,b:7,c:[5,9]},            null,       vi3,        null,               {a:9,b:28,c:[15,36]}],
+        [ {a:3,b:7,c:[{d:[1,3,5]},9]},  null,       vi3,        null,               {a:9,b:28,c:[{d:[3,12,25]},36]} ],
+        [ [3,7,[{d:[1,3,5]},9]],        null,       vi3,        null,               [9,28,[{d:[3,12,25]},36]] ],
+        [ [3,7,[{d:[1,3,5]},9]],        null,       vi3,        null,               [9,28,[{d:[3,12,25]},36]] ],
+        [ {a:3,b:7,c:[{d:[1,3,5]},9]},  null,       nullval(7),        null,        {a:3,c:[{d:[1,3,5]},9]}],
+        [ {a:3,b:7,c:[{d:[1,3,5]},9]},  nullkey('c'), null,        null,            {a:3,b:7}],
+    ], qbobj.mapn )
 })
-*/
 
 test('oo_put', function (t) {
     t.table_assert([
