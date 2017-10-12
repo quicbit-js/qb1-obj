@@ -182,18 +182,20 @@ test('filter', function (t) {
     var sel_v = function (vmax) { return function (k,v) { return v <= vmax } }
     var sel_i = function (imax) { return function (k,v,i) { return i <= imax } }
     t.table_assert([
-        [ 'o',              'fn',               'exp' ],
-        [ {},               null,               {} ],
-        [ {a:9, b:7},      sel_k(/x/),          {} ],
-        [ {a:9, b:7},      sel_k(/a/),          {a:9} ],
-        [ {a:9, b:7},      sel_k(/b/),          {b:7} ],
-        [ {a:9, b:7},      sel_v(3),            {} ],
-        [ {a:9, b:7},      sel_v(7),            {b:7} ],
-        [ {a:9, b:7},      sel_v(9),            {a:9,b:7} ],
-        [ {a:9, b:7},      sel_i(-1),           {} ],
-        [ {a:9, b:7},      sel_i(0),            {a:9} ],
-        [ {a:9, b:7},      sel_i(1),            {a:9,b:7} ],
-
+        [ 'o',              'fn',           'keys',       'exp' ],
+        [ {},               null,           null,       {} ],
+        [ {a:9, b:7},      sel_k(/x/),      null,       {} ],
+        [ {a:9, b:7},      sel_k(/a/),      null,       {a:9} ],
+        [ {a:9, b:7},      sel_k(/b/),      null,       {b:7} ],
+        [ {a:9, b:7},      sel_v(3),        null,       {} ],
+        [ {a:9, b:7},      sel_v(7),        null,       {b:7} ],
+        [ {a:9, b:7},      sel_v(9),        null,       {a:9,b:7} ],
+        [ {a:9, b:7},      sel_i(-1),       null,       {} ],
+        [ {a:9, b:7},      sel_i(0),        null,       {a:9} ],
+        [ {a:9, b:7},      sel_i(1),        null,       {a:9,b:7} ],
+        [ {a:9, b:7},      sel_i(1),        ['a','b'],  {a:9,b:7} ],
+        [ {a:9, b:7},      sel_v(7),        ['b'],      {b:7} ],
+        [ {a:9, b:7},      sel_v(7),        ['a'],      {} ],
     ], qbobj.filter)
 })
 

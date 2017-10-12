@@ -233,9 +233,9 @@ module.exports = {
         }
         return ret
     },
-    filter: function (o, fn) {
+    filter: function (o, fn, keys) {
         var ret = {}
-        var keys = keys || Object.keys(o)
+        keys = keys || Object.keys(o)
         for (var i = 0; i < keys.length; i++) {
             var k = keys[i]
             if (fn(k,o[k],i)) { ret[k] = o[k] }
