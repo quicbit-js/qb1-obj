@@ -201,6 +201,16 @@ test('filter', function (t) {
     ], qbobj.filter)
 })
 
+test('select', function (t) {
+    t.table_assert([
+        [ 'o',          'keys',              'exp' ],
+        [ {a:9, b:7},   [],                  {} ],
+        [ {a:9, b:7},   ['a'],               {a:9} ],
+        [ {a:9, b:7},   ['b'],               {b:7} ],
+        [ {a:9, b:7},   ['a','b'],           {a:9,b:7} ],
+    ], qbobj.select)
+})
+
 test('mapn', function (t) {
     var ki = function(k,v,i) {
         return k + i

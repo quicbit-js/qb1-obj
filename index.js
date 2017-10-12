@@ -247,6 +247,9 @@ module.exports = {
         return ret
     },
     filter: filter,
+    select: function (o, keys) {
+        return filter (o, null, {keys:keys})
+    },
     oa_push: function (o, k, v) {
         var a = o[k]
         if (!a) { o[k] = a = [] }
