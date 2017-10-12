@@ -151,17 +151,18 @@ test('map', function (t) {
     var kgt = function (lim) { return function (k) { return k > lim ? k : null } }
     var vgt = function (lim) { return function (k,v) { return v > lim ? v : null } }
     t.table_assert([
-        [ 'o',                          'kfn',    'vfn',    'opt',              'exp' ],
-        [ {},                           null,     null,     null,               {} ],
-        [ {a:3, b:null, c:13},          null,     null,      {},                { a:3, c:13 } ],
-        [ {a:3, b:7, c:13},             null,     kvi,      {},                 { a: 'a@0.3', b: 'b@1.7', c: 'c@2.13' } ],
-        [ {a:3, b:7, c:13},             kvi,      null,     {},                 { 'a@0.3': 3, 'b@1.7': 7, 'c@2.13': 13 } ],
-        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,     {},                 { 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
-        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,     {init: {q:9}},      { q: 9, 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
-        [ {b:2, c:7, d:2},              kgt('b'), null,     {init: {a:1}},      { a:1, c:7, d:2 } ],
-        [ {b:3, c:7, d:2},              null,     vgt(2),   {},                 { b:3, c:7 } ],
-        [ {b:3, c:7, d:2},              kgt('b'), vgt(2),   {},                 { c:7 } ],
-        [ {b:3, c:7, d:2},              kgt('b'), vgt(2),   {keep_null: 1},     { c:7, d:null } ],
+        [ 'o',                          'kfn',    'vfn',    'opt',                      'exp' ],
+        [ {},                           null,     null,     null,                       {} ],
+        [ {a:3, b:null, c:13},          null,     null,      {},                        { a:3, c:13 } ],
+        [ {a:3, b:7, c:13},             null,     kvi,      {},                         { a: 'a@0.3', b: 'b@1.7', c: 'c@2.13' } ],
+        [ {a:3, b:7, c:13},             kvi,      null,     {},                         { 'a@0.3': 3, 'b@1.7': 7, 'c@2.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,     {},                         { 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,     {init: {q:9}},              { q: 9, 'a@0.3': 3, 'b@1.{1}': { z: [ 7, 8 ] }, 'c@2.13': 13 } ],
+        [ {a:3, b:{z:[7,8]}, c:13},     kvi,      null,     {init: {q:9}, keys:['c']},  { q: 9, 'c@0.13': 13 } ],
+        [ {b:2, c:7, d:2},              kgt('b'), null,     {init: {a:1}},              { a:1, c:7, d:2 } ],
+        [ {b:3, c:7, d:2},              null,     vgt(2),   {},                         { b:3, c:7 } ],
+        [ {b:3, c:7, d:2},              kgt('b'), vgt(2),   {},                         { c:7 } ],
+        [ {b:3, c:7, d:2},              kgt('b'), vgt(2),   {keep_null: 1},             { c:7, d:null } ],
     ], qbobj.map)
 })
 
@@ -182,21 +183,21 @@ test('filter', function (t) {
     var sel_v = function (vmax) { return function (k,v) { return v <= vmax } }
     var sel_i = function (imax) { return function (k,v,i) { return i <= imax } }
     t.table_assert([
-        [ 'o',              'fn',           'keys',       'exp' ],
-        [ {},               null,           null,       {} ],
-        [ {a:9, b:7},      sel_k(/x/),      null,       {} ],
-        [ {a:9, b:7},      sel_k(/a/),      null,       {a:9} ],
-        [ {a:9, b:7},      sel_k(/b/),      null,       {b:7} ],
-        [ {a:9, b:7},      sel_v(3),        null,       {} ],
-        [ {a:9, b:7},      sel_v(7),        null,       {b:7} ],
-        [ {a:9, b:7},      sel_v(9),        null,       {a:9,b:7} ],
-        [ {a:9, b:7},      sel_i(-1),       null,       {} ],
-        [ {a:9, b:7},      sel_i(0),        null,       {a:9} ],
-        [ {a:9, b:7},      sel_i(1),        null,       {a:9,b:7} ],
-        [ {a:9, b:7},      sel_i(1),        ['a','b'],  {a:9,b:7} ],
-        [ {a:9, b:7},      sel_v(7),        ['b'],      {b:7} ],
-        [ {a:9, b:7},      sel_v(7),        ['a'],      {} ],
-        [ {a:9, b:7},      null,            ['a'],      {a:9} ],
+        [ 'o',              'fn',           'opt',              'exp' ],
+        [ {},               null,           null,               {} ],
+        [ {a:9, b:7},      sel_k(/x/),      null,               {} ],
+        [ {a:9, b:7},      sel_k(/a/),      null,               {a:9} ],
+        [ {a:9, b:7},      sel_k(/b/),      null,               {b:7} ],
+        [ {a:9, b:7},      sel_v(3),        null,               {} ],
+        [ {a:9, b:7},      sel_v(7),        null,               {b:7} ],
+        [ {a:9, b:7},      sel_v(9),        null,               {a:9,b:7} ],
+        [ {a:9, b:7},      sel_i(-1),       null,               {} ],
+        [ {a:9, b:7},      sel_i(0),        null,               {a:9} ],
+        [ {a:9, b:7},      sel_i(1),        null,               {a:9,b:7} ],
+        [ {a:9, b:7},      sel_i(1),        {keys:['a','b']},   {a:9,b:7} ],
+        [ {a:9, b:7},      sel_v(7),        {keys:['a','b']},   {b:7} ],
+        [ {a:9, b:7},      sel_v(7),        {keys:['a']},       {} ],
+        [ {a:9, b:7},      null,            {keys:['a']},       {a:9} ],
     ], qbobj.filter)
 })
 

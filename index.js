@@ -131,13 +131,14 @@ function walk_container (src, cb, carry, opt, path, control) {
 //     init         object, if provided will be used as the root object to populate
 //     keep_null    if true, null and undefined values are kept (however, returning nulls for keys will still drop)
 //     deep         array of property names, if given, will be included even in prototypes (beyond shallow mapping Object.keys())
+//     keys         array of keys to use instead of Object.keys()
 // }
 //
 function map (o, kfn, vfn, opt) {
     opt = opt || {}
     var ret = opt.init || {}
     var keep_null = opt.keep_null
-    var keys = Object.keys(o)
+    var keys = opt.keys || Object.keys(o)
     if (opt.deep) {
         keys = opt.deep.concat(keys)
     }
@@ -156,6 +157,18 @@ function map (o, kfn, vfn, opt) {
     }
     return ret
 }
+
+function filter (o, fn, opt) {
+    opt = opt || {}
+    var ret = opt.init || {}
+    var keys = opt.keys || Object.keys(o)
+    for (var i = 0; i < keys.length; i++) {
+        var k = keys[i]
+        if ( fn == null || fn(k,o[k],i)) { ret[k] = o[k] }
+    }
+    return ret
+}
+
 
 // nested map function
 //
@@ -233,15 +246,7 @@ module.exports = {
         }
         return ret
     },
-    filter: function (o, fn, keys) {
-        var ret = {}
-        keys = keys || Object.keys(o)
-        for (var i = 0; i < keys.length; i++) {
-            var k = keys[i]
-            if ( fn == null || fn(k,o[k],i)) { ret[k] = o[k] }
-        }
-        return ret
-    },
+    filter: filter,
     oa_push: function (o, k, v) {
         var a = o[k]
         if (!a) { o[k] = a = [] }
