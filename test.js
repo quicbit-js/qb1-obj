@@ -196,6 +196,7 @@ test('filter', function (t) {
         [ {a:9, b:7},      sel_i(1),        ['a','b'],  {a:9,b:7} ],
         [ {a:9, b:7},      sel_v(7),        ['b'],      {b:7} ],
         [ {a:9, b:7},      sel_v(7),        ['a'],      {} ],
+        [ {a:9, b:7},      null,            ['a'],      {a:9} ],
     ], qbobj.filter)
 })
 
