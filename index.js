@@ -162,13 +162,20 @@ function filter (o, fn, opt) {
     opt = opt || {}
     var ret = opt.init || {}
     var keys = opt.keys || Object.keys(o)
+    fn = fn || function(k,v) { return v }         // filter falsey values by default
     for (var i = 0; i < keys.length; i++) {
         var k = keys[i]
-        if ( fn == null || fn(k,o[k],i)) { ret[k] = o[k] }
+        if ( fn(k,o[k],i)) { ret[k] = o[k] }
     }
     return ret
 }
 
+function select (o, keys, opt) {
+    opt = opt || {}
+    var ret = opt.init || {}
+    for (var i = 0; i < keys.length; i++) { ret[keys[i]] = o[keys[i]] }
+    return ret
+}
 
 // nested map function
 //
@@ -247,9 +254,7 @@ module.exports = {
         return ret
     },
     filter: filter,
-    select: function (o, keys) {
-        return filter (o, null, {keys:keys})
-    },
+    select: select,
     oa_push: function (o, k, v) {
         var a = o[k]
         if (!a) { o[k] = a = [] }
