@@ -129,7 +129,7 @@ function walk_container (src, cb, carry, opt, path, control) {
 //
 // opt {
 //     init         object, if provided will be used as the root object to populate
-//     keep_null    if true, null and undefined values are kept (however, returning nulls for keys will still drop)
+//     keep_null    if true, null and undefined values are kept (however, returning nulls for keys will still skip)
 //     deep         array of property names, if given, will be included even in prototypes (beyond shallow mapping Object.keys())
 //     keys         array of keys to use instead of Object.keys()
 // }
@@ -170,10 +170,17 @@ function filter (o, fn, opt) {
     return ret
 }
 
+
 function select (o, keys, opt) {
     opt = opt || {}
+    var keep_null = opt.keep_null || false
     var ret = opt.init || {}
-    for (var i = 0; i < keys.length; i++) { ret[keys[i]] = o[keys[i]] }
+    for (var i = 0; i < keys.length; i++) {
+        var v = o[keys[i]]
+        if (!keep_null && v != null) {
+            ret[keys[i]] = v
+        }
+    }
     return ret
 }
 
