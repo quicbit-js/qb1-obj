@@ -178,6 +178,21 @@ test('map deep', function (t) {
     ], qbobj.map)
 })
 
+test('for_val', function (t) {
+    var kvi = function (k, v, i) { return k + '@' + i + '.' + val2str(qbobj.tcode(v), v)}
+
+    t.table_assert([
+        [ 'obj',                                'exp' ],
+        [ {a: null},                            [ [ 'a', null, 0 ] ] ],
+        [ {a: 1},                               [ [ 'a', 1, 0 ] ] ],
+        [ {a: [1,2,3], b: {c: 4}},              [ [ 'a', [ 1, 2, 3 ], 0 ], [ 'b', { c: 4 }, 1 ] ] ],
+    ], function (obj) {
+        var hec = t.hector()
+        qbobj.for_val(obj, hec)
+        return hec.args
+    })
+})
+
 test('filter', function (t) {
     var sel_k = function (kexpr) { return function (k) { return kexpr.test(k) } }
     var sel_v = function (vmax) { return function (k,v) { return v <= vmax } }

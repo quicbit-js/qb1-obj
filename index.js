@@ -158,6 +158,13 @@ function map (o, kfn, vfn, opt) {
     return ret
 }
 
+function for_val (o, vfn) {
+    var keys = Object.keys(o)
+    for (var i=0; i<keys.length; i++) {
+        vfn(keys[i], o[keys[i]], i)
+    }
+}
+
 function filter (o, fn, opt) {
     opt = opt || {}
     var ret = opt.init || {}
@@ -260,6 +267,7 @@ module.exports = {
         }
         return ret
     },
+    for_val: for_val,
     filter: filter,
     select: select,
     oa_push: function (o, k, v) {
