@@ -294,3 +294,10 @@ test('oa_push', function (t) {
     ], function (o, k, v) { qbobj.oa_push(o,k,v); return o } )
 })
 
+test('invert', function (t) {
+    t.table_assert([
+        [ 'o',                          'exp' ],
+        [ {a: 1, b: 2},                 { 1: 'a', 2: 'b' } ],
+        [ {a: 1, b: 'x', c: 0 },        { 1: 'a', 'x': 'b', 0: 'c' } ],
+    ], qbobj.invert)
+})

@@ -267,6 +267,14 @@ module.exports = {
         }
         return ret
     },
+    invert: function (o) {
+        var ret = {}
+        var keys = Object.keys(o)
+        for (var i=0; i<keys.length; i++) {
+            ret[o[keys[i]]] = keys[i]
+        }
+        return ret
+    },
     for_val: for_val,
     filter: filter,
     select: select,
@@ -285,7 +293,6 @@ module.exports = {
     oo_get: function (o, k1, k2) {
         return o[k1] && o[k1][k2]
     },
-
     walk: walk,
     map: map,
     mapn: mapn,
