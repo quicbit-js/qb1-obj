@@ -1,3 +1,19 @@
+// Software License Agreement (ISC License)
+//
+// Copyright (c) 2017, Matthew Voss
+//
+// Permission to use, copy, modify, and/or distribute this software for
+// any purpose with or without fee is hereby granted, provided that the
+// above copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 // walk: iterate over any javascript value (object, array, string, number, null...) and all nested values invoking a
 // callback.
 //
@@ -113,82 +129,11 @@ function walk_container (src, cb, carry, opt, path, control) {
     return carry
 }
 
-// maps keys and values to a new map of keys and values - null/undefined keys and values are
-// dropped by default.
-//
-// kfn (            function if provided, maps keys to new keys (maintaining order)
-//     k            key
-//     v            value
-//     i            index (of object insert-order)
-// )
-// vfn (            function if provided maps values to new values (maintaining order)
-//     k            object key, or null for arrays
-//     v            value
-//     i            index (of object insert-order)
-// )
-//
-// opt {
-//     init         object, if provided will be used as the root object to populate
-//     keep_null    if true, null and undefined values are kept (however, returning nulls for keys will still skip)
-//     deep         array of property names, if given, will be included even in prototypes (beyond shallow mapping Object.keys())
-//     keys         array of keys to use instead of Object.keys()
-// }
-//
-function map (o, kfn, vfn, opt) {
-    opt = opt || {}
-    var ret = opt.init || {}
-    var keep_null = opt.keep_null
-    var keys = opt.keys || Object.keys(o)
-    if (opt.deep) {
-        keys = opt.deep.concat(keys)
-    }
-    for (var i = 0; i < keys.length; i++) {
-        var k = keys[i]
-        var v = o[k]
-        if (kfn) {
-            k = kfn(k, v, i)
-        }
-        if (vfn) {
-            v = vfn(k, v, i)
-        }
-        if (k != null && (keep_null || v != null)) {
-            ret[k] = v
-        }
-    }
-    return ret
-}
-
 function for_val (o, vfn) {
     var keys = Object.keys(o)
     for (var i=0; i<keys.length; i++) {
         vfn(keys[i], o[keys[i]], i)
     }
-}
-
-function filter (o, fn, opt) {
-    opt = opt || {}
-    var ret = opt.init || {}
-    var keys = opt.keys || Object.keys(o)
-    fn = fn || function(k,v) { return v }         // filter falsey values by default
-    for (var i = 0; i < keys.length; i++) {
-        var k = keys[i]
-        if ( fn(k,o[k],i)) { ret[k] = o[k] }
-    }
-    return ret
-}
-
-
-function select (o, keys, opt) {
-    opt = opt || {}
-    var keep_null = opt.keep_null || false
-    var ret = opt.init || {}
-    for (var i = 0; i < keys.length; i++) {
-        var v = o[keys[i]]
-        if (!keep_null && v != null) {
-            ret[keys[i]] = v
-        }
-    }
-    return ret
 }
 
 // nested map function
@@ -257,44 +202,8 @@ function mapn (o, kfn, vfn, opt) {
 }
 
 module.exports = {
-    len: function (o) { return Object.keys(o).length },
-    keys: function (o) { return Object.keys(o) },
-    vals: function (o, keys) {
-        var ret = []
-        keys = keys || Object.keys(o)
-        for (var i = 0; i < keys.length; i++) {
-            ret[i] = o[keys[i]]
-        }
-        return ret
-    },
-    invert: function (o) {
-        var ret = {}
-        var keys = Object.keys(o)
-        for (var i=0; i<keys.length; i++) {
-            ret[o[keys[i]]] = keys[i]
-        }
-        return ret
-    },
     for_val: for_val,
-    filter: filter,
-    select: select,
-    oa_push: function (o, k, v) {
-        var a = o[k]
-        if (!a) { o[k] = a = [] }
-        a.push(v)
-    },
-    oo_put: function (o, k1, k2, v) {
-        var oo = o[k1]
-        if (!oo) { o[k1] = oo = {} }
-        var prev = oo[k2]
-        oo[k2] = v
-        return prev
-    },
-    oo_get: function (o, k1, k2) {
-        return o[k1] && o[k1][k2]
-    },
     walk: walk,
-    map: map,
     mapn: mapn,
     tcode: typecode,
     TCODES: TCODES,
